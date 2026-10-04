@@ -1,0 +1,44 @@
+
+name                 address         offset          bit_range    width      type       defaultValue    description                   
+########################################################################################################
+date                 0x00000000     0x0000         [31:0]       32         RO                         reset the Module              
+user                 0x00000004     0x0004         [15:0]       16         RO                         reset the Module              
+version              0x00000008     0x0008         [15:0]       16         RO                         reset the Module              
+Key                  0x0000000C     0x000C         [31:0]       32         RW         32'h0           reset the Module              
+
+name                 address         offset          bit_range    width      type       defaultValue    description                   
+########################################################################################################
+inPktCnt             0x00000100     0x0000         [15:0]       16         RO                         reset the Module              
+inSopPktCnt          0x00000104     0x0004         [31:0]       32         RO                         reset the Module              
+inChan0PktCnt        0x00000108     0x0008         [31:0]       32         RO                         reset the Module              
+dna1                 0x00000110     0x0000         [31:0]       32         WO         32'h789         reset the Module              
+dna2                 0x00000114     0x0004         [14:0]       15         WO         15'h123         reset the Module              
+dna3                 0x00000118     0x0008         [31:0]       32         WO         32'habc         reset the Module              
+softReset            0x00000120     0x0000         [0:0]        1          RW         1'h1            reset the Module              
+readDone             0x00000130     0x0000         [0:0]        1          RI                         reset the Module              
+readStart            0x00000134     0x0004         [0:0]        1          RI                         reset the Module              
+startInit            0x00000140     0x0000         [0:0]        1          WI                         reset the Module              
+status0Intr          0x00000150     0x0000         [31:0]       32         RIWI                       reset the Module              
+status1Intr          0x00000154     0x0004         [31:0]       32         RIWI                       reset the Module              
+status2Intr          0x00000158     0x0008         [31:0]       32         RIWI                       reset the Module              
+interrupt0Set        0x00000160     0x0000         [31:0]       32         RWI                        reset the Module              
+
+name                 address         depth      width      description                   
+########################################################################################################
+mem1                 0x00000180     16         64         store the in pkt Cnt          
+mem2                 0x00001000     256        128        store the in pkt Cnt          
+
+MemName:mem1
+########################################################################################################
+name                 offset          fieldHi    fieldLo    description                   
+########################################################################################################
+cnt0                 0               31         0          cnt for the in pkt            
+cnt1                 1               15         0          cnt for the out pkt           
+
+MemName:mem2
+########################################################################################################
+name                 offset          fieldHi    fieldLo    description                   
+########################################################################################################
+disCnt0              0               31         0          cnt for the in pkt            
+checkCnt1            1               31         0          cnt for the out pkt           
+checkCnt2            2               31         0          cnt for the out pkt           

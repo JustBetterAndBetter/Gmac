@@ -1,0 +1,41 @@
+
+RegFixFieldDefine:
+name                 width      type       defaultValue    description
+date                 32         RO                         reset the Module
+user                 16         RO                         reset the Module
+version              16         RO                         reset the Module
+Key                  32         RW         32'h0           reset the Module
+
+RegFieldDefine:
+name                 width      type       defaultValue    description
+inPktCnt             16         RO                         reset the Module
+inSopPktCnt          32         RO                         reset the Module
+inChan0PktCnt        32         RO                         reset the Module
+dna1                 32         WO         32'h789         reset the Module
+dna2                 15         WO         15'h123         reset the Module
+dna3                 32         WO         32'habc         reset the Module
+softReset            1          RW         1'h1            reset the Module
+readDone             1          RI                         reset the Module
+readStart            1          RI                         reset the Module
+startInit            1          WI                         reset the Module
+status0Intr          32         RIWI                       reset the Module
+status1Intr          32         RIWI                       reset the Module
+status2Intr          32         RIWI                       reset the Module
+interrupt0Set        32         RWI                        reset the Module
+
+MemFieldDefine:
+name                 depth      width      description
+mem1                 16         64         store the in pkt Cnt
+mem2                 256        128        store the in pkt Cnt
+ 
+MemName:mem1
+name                 offset     fieldHi    fieldLo    description
+cnt0                 0          31         0          cnt for the in pkt
+cnt1                 1          15         0          cnt for the out pkt
+
+MemName:mem2
+name                 offset     fieldHi    fieldLo    description
+disCnt0              0          31         0          cnt for the in pkt
+checkCnt1            1          31         0          cnt for the out pkt
+checkCnt2            2          31         0          cnt for the out pkt
+
