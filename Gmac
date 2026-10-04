@@ -1,0 +1,54 @@
+# 1G GMAC 寄存器描述。勿手改 GmacReg.v，改本文件后重新跑脚本：
+#   perl RegGen/RegParser.pl -f GmacRtl/Gmac
+#   perl RegGen/RegValidator.pl GmacRtl/GmacReg.txt
+#   perl RegGen/RegRtlGenerator.pl -f GmacRtl/GmacReg.txt
+# 字段名小驼峰。RegGen 按类型分组、组间隔 0x100。
+# 控制 = RW 输出；当前状态 / 计数 = RO 输入。
+
+RegFixFieldDefine:
+name                 width      type       defaultValue    description
+date                 32         RO                         build date YYYYMMDD
+user                 16         RO                         user id
+version              16         RO                         rtl version
+
+RegFieldDefine:
+name                 width      type       defaultValue    description
+# ctrl
+softRst              1          RW         1'h0            software reset
+txEn                 1          RW         1'h1            transmit enable
+rxEn                 1          RW         1'h1            receive enable
+loopback             1          RW         1'h0            10bit near end loopback
+xmit                 2          RW         2'd2            PCS xmit 0=IDLE 1=CONFIG 2=DATA
+fifoTxFifoThrd       8          RW         8'd1            Tx FIFO start threshold in 128b words
+irqMask              32         RW         32'h0           interrupt mask
+# cdc current
+txFifoLevel          8          RO                         Tx FIFO fill level
+rxFifoLevel          8          RO                         Rx FIFO fill level
+fifoAlFull           1          RO                         Tx FIFO almost full
+txFifoPeakCnt        8          RO                         Tx FIFO peak fill
+rxFifoPeakCnt        8          RO                         Rx FIFO peak fill
+# rs current
+txBusy               1          RO                         Tx framer not idle
+rsRxState            2          RO                         RsRxParser FSM
+padCnt               11         RO                         Tx padded frame count
+# pcs current
+pcsRxSync            1          RO                         PCS syncStatus OK
+pcsTxState           2          RO                         PcsTxEncode FSM
+pcsTxEven            1          RO                         Tx even code group
+pcsTxRd              1          RO                         Tx running disparity
+pcsRxSyncState       3          RO                         PcsRxSync FSM
+pcsRxEven            1          RO                         Rx even code group
+pcsRxRd              1          RO                         Rx running disparity
+irqRaw               32         RO                         live irq sources see GmacIf.vh
+# past counters, accumulate in datapath
+txOverRunCnt         32         RO                         Tx FIFO write overrun count
+txUnderRunCnt        32         RO                         Tx FIFO read underrun count
+rxOverflowCnt        32         RO                         Rx FIFO overflow count
+txVbErrCnt           32         RO                         Tx user Vb illegal count
+txOversizeCnt        16         RO                         Tx oversize frame count
+txUnderrunCnt        16         RO                         Tx packet underrun count
+rxCrcErrCnt          32         RO                         Rx CRC error count
+txSfdCnt             16         RO                         Tx SFD count
+rxSfdCnt             32         RO                         Rx SFD count
+lossOfSyncCnt        32         RO                         PCS loss of sync count
+codeVCnt             32         RO                         Rx /V/ or invalid in packet count
