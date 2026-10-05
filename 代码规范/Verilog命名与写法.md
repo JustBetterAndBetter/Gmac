@@ -407,7 +407,6 @@ assign inPktInt = (inPkt | rsFire) & ~(rsFire & isLastByte & headEfp);
 input [7:0] gbxTxFifoThrd;
 
 IP_DataGraySync #(.DATAWIDTH(8)) uGbxTxFifoThrd (
-    .clockA (clkMgmt),
     .dataA  (gbxTxFifoThrd),
     .clockB (clkSdsTx),
     .dataB  (gbxTxFifoThrdSds)
@@ -466,6 +465,35 @@ endgenerate
 模块里对不该发生的情况加仿真检查，方便验证直接看到运行错误。典型情况：反压之后仍来 Valid、FIFO 满仍 Push、`Vb` 越界、状态落到非法编码。
 
 断言放在对应功能块末尾，只在仿真里生效，不参与综合，也不为它改数据通路。工具支持时用 `assert`；只吃 Verilog 时用综合会丢掉的等价检查。
+
+### 4.17 运算和比较的位宽写齐
+
+比较、加减的两边位宽要在表达式里写齐。窄的一边用拼接把高位补 0，补到和宽的一边一样。无符号比较按补零后的值做。位宽不同的信号不要直接放在 `>`、`>=`、`<`、`<=`、`==`、`+`、`-` 两边，让工具自己扩展。
+
+```verilog
+assign ifgSkip = fcsLast & (tailStallCnt >= {1'd0, ifgCntLock});
+```
+
+`tailStallCnt` 为 5 bit，`ifgCntLock` 为 4 bit。计数器自加 1 时，加数位宽与计数器一致，见第 4.6 节。
+
+### 4.18 加法留进位，减法处理小减小
+
+加法的结果要留出进位。两个 N bit 无符号数相加，和写成 N+1 bit，最高位是进位。自加 1 的计数器若上限到不了全 1，和仍用计数器位宽，由第 4.6 节的上限判断拦住，不另加进位位。
+
+```verilog
+wire [8:0] sum;
+assign sum = {1'b0, a} + {1'b0, b};
+```
+
+`a`、`b` 各 8 bit。最高位是进位，不丢。
+
+减法要处理被减数小于减数。无符号直接相减会绕成大数。先比较：被减数大于等于减数才减，否则结果为 0。结果需要保留正负时，用 `signed`，并在声明行说明原因，见第 5.3 节。计数回绕是故意的，在该处留一句注释。
+
+```verilog
+assign diff = (a >= b) ? (a - b) : 8'd0;
+```
+
+`a`、`b`、`diff` 同为 8 bit。`a < b` 时结果是 0，不绕回。
 
 ---
 

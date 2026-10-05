@@ -20,9 +20,9 @@
 
 module PcsSdsGearbox(/*autoarg*/
         //Inputs
-        clkTx, clkSdsTx, clkRx, clkSdsRx, clkMgmt, rstN,
-        gbxTxFifoThrd, gbxRxFifoThrd,
-        pcs2GbxCodeBusCodeGroup, sds2GbxRxBusData,
+        clkTx, clkSdsTx, clkRx, clkSdsRx, rstN, gbxTxFifoThrd, 
+        gbxRxFifoThrd, pcs2GbxCodeBusCodeGroup, 
+        sds2GbxRxBusData, 
         //Outputs
         gbx2PcsCodeBusCodeGroup, gbx2SdsTxBusData
 );
@@ -35,7 +35,6 @@ input                   clkTx;
 input                   clkSdsTx;
 input                   clkRx;
 input                   clkSdsRx;
-input                   clkMgmt;
 input                   rstN;
 
 input  [7:0]            gbxTxFifoThrd;
@@ -58,7 +57,6 @@ input  [`GMAC_SDS_W-1:0]  sds2GbxRxBusData;
     PcsSdsGbxTx uPcsSdsGbxTx (
         .clkTx                     (clkTx),
         .clkSdsTx                  (clkSdsTx),
-        .clkMgmt                   (clkMgmt),
         .rstN                      (rstN),
         .gbxTxFifoThrd             (gbxTxFifoThrd),
         .pcs2GbxCodeBusCodeGroup   (pcs2GbxCodeBusCodeGroup),
@@ -72,7 +70,6 @@ input  [`GMAC_SDS_W-1:0]  sds2GbxRxBusData;
     PcsSdsGbxRx uPcsSdsGbxRx (
         .clkSdsRx                  (clkSdsRx),
         .clkRx                     (clkRx),
-        .clkMgmt                   (clkMgmt),
         .rstN                      (rstN),
         .gbxRxFifoThrd             (gbxRxFifoThrd),
         .sds2GbxRxBusData          (sds2GbxRxBusData),

@@ -17,6 +17,7 @@
 // 2026/10/01   fxdqe           1.3                     分域复位改用 IP_ResetSync
 // 2026/10/01   fxdqe           1.4                     去掉 GmacFifoRst，双钟握手进 FIFO
 // 2026/10/01   fxdqe           1.5                     口计数灰码同步到 clkMgmt
+// 2026/10/05   fxdqe           1.6                     同步器去掉源时钟端口
 // -FHDR----------------------------------------------------------------------------
 
 `include "GmacIf.vh"
@@ -196,7 +197,6 @@ wire [`GMAC_CNT_W8-1:0]    rxOutErrCntUsr;
 //======================================================
 
     IP_Sync #(.DATA_WIDTH(8)) uFifoTxFifoThrd (
-        .clockIn  (clkMgmt),
         .clockOut (clkTx),
         .reset    (rstNTx),
         .dataIn   (fifoTxFifoThrd),
@@ -204,7 +204,6 @@ wire [`GMAC_CNT_W8-1:0]    rxOutErrCntUsr;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uFifoAlFull (
-        .clockIn  (clkUsr),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (fifoAlFullUsr),
@@ -212,123 +211,115 @@ wire [`GMAC_CNT_W8-1:0]    rxOutErrCntUsr;
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W8)) uTxFifoLevel (
-        .clockA (clkTx),
         .dataA  (txFifoLevelTx),
         .clockB (clkMgmt),
         .dataB  (txFifoLevel)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W8)) uTxFifoPeakCnt (
-        .clockA (clkTx),
         .dataA  (txFifoPeakCntTx),
         .clockB (clkMgmt),
         .dataB  (txFifoPeakCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uTxOverRunCnt (
-        .clockA (clkUsr),
         .dataA  (txOverRunCntUsr),
         .clockB (clkMgmt),
         .dataB  (txOverRunCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uTxUnderRunCnt (
-        .clockA (clkTx),
         .dataA  (txUnderRunCntTx),
         .clockB (clkMgmt),
         .dataB  (txUnderRunCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uTxVbErrCnt (
-        .clockA (clkUsr),
         .dataA  (txVbErrCntUsr),
         .clockB (clkMgmt),
         .dataB  (txVbErrCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W8)) uRxFifoLevel (
-        .clockA (clkUsr),
         .dataA  (rxFifoLevelUsr),
         .clockB (clkMgmt),
         .dataB  (rxFifoLevel)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W8)) uRxFifoPeakCnt (
-        .clockA (clkUsr),
         .dataA  (rxFifoPeakCntUsr),
         .clockB (clkMgmt),
         .dataB  (rxFifoPeakCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uRxOverflowCnt (
-        .clockA (clkRx),
         .dataA  (rxOverflowCntRx),
         .clockB (clkMgmt),
         .dataB  (rxOverflowCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uTxInSfpCnt (
-        .clockA (clkUsr), .dataA (txInSfpCntUsr), .clockB (clkMgmt), .dataB (txInSfpCnt)
+        .dataA (txInSfpCntUsr), .clockB (clkMgmt), .dataB (txInSfpCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uTxInEfpCnt (
-        .clockA (clkUsr), .dataA (txInEfpCntUsr), .clockB (clkMgmt), .dataB (txInEfpCnt)
+        .dataA (txInEfpCntUsr), .clockB (clkMgmt), .dataB (txInEfpCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uTxInVbCnt (
-        .clockA (clkUsr), .dataA (txInVbCntUsr), .clockB (clkMgmt), .dataB (txInVbCnt)
+        .dataA (txInVbCntUsr), .clockB (clkMgmt), .dataB (txInVbCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uTxInValidCnt (
-        .clockA (clkUsr), .dataA (txInValidCntUsr), .clockB (clkMgmt), .dataB (txInValidCnt)
+        .dataA (txInValidCntUsr), .clockB (clkMgmt), .dataB (txInValidCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W8)) uTxInErrCnt (
-        .clockA (clkUsr), .dataA (txInErrCntUsr), .clockB (clkMgmt), .dataB (txInErrCnt)
+        .dataA (txInErrCntUsr), .clockB (clkMgmt), .dataB (txInErrCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uTxOutSfpCnt (
-        .clockA (clkTx), .dataA (txOutSfpCntTx), .clockB (clkMgmt), .dataB (txOutSfpCnt)
+        .dataA (txOutSfpCntTx), .clockB (clkMgmt), .dataB (txOutSfpCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uTxOutEfpCnt (
-        .clockA (clkTx), .dataA (txOutEfpCntTx), .clockB (clkMgmt), .dataB (txOutEfpCnt)
+        .dataA (txOutEfpCntTx), .clockB (clkMgmt), .dataB (txOutEfpCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uTxOutVbCnt (
-        .clockA (clkTx), .dataA (txOutVbCntTx), .clockB (clkMgmt), .dataB (txOutVbCnt)
+        .dataA (txOutVbCntTx), .clockB (clkMgmt), .dataB (txOutVbCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uTxOutValidCnt (
-        .clockA (clkTx), .dataA (txOutValidCntTx), .clockB (clkMgmt), .dataB (txOutValidCnt)
+        .dataA (txOutValidCntTx), .clockB (clkMgmt), .dataB (txOutValidCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W8)) uTxOutErrCnt (
-        .clockA (clkTx), .dataA (txOutErrCntTx), .clockB (clkMgmt), .dataB (txOutErrCnt)
+        .dataA (txOutErrCntTx), .clockB (clkMgmt), .dataB (txOutErrCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uRxInSfpCnt (
-        .clockA (clkRx), .dataA (rxInSfpCntRx), .clockB (clkMgmt), .dataB (rxInSfpCnt)
+        .dataA (rxInSfpCntRx), .clockB (clkMgmt), .dataB (rxInSfpCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uRxInEfpCnt (
-        .clockA (clkRx), .dataA (rxInEfpCntRx), .clockB (clkMgmt), .dataB (rxInEfpCnt)
+        .dataA (rxInEfpCntRx), .clockB (clkMgmt), .dataB (rxInEfpCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uRxInVbCnt (
-        .clockA (clkRx), .dataA (rxInVbCntRx), .clockB (clkMgmt), .dataB (rxInVbCnt)
+        .dataA (rxInVbCntRx), .clockB (clkMgmt), .dataB (rxInVbCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uRxInValidCnt (
-        .clockA (clkRx), .dataA (rxInValidCntRx), .clockB (clkMgmt), .dataB (rxInValidCnt)
+        .dataA (rxInValidCntRx), .clockB (clkMgmt), .dataB (rxInValidCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W8)) uRxInErrCnt (
-        .clockA (clkRx), .dataA (rxInErrCntRx), .clockB (clkMgmt), .dataB (rxInErrCnt)
+        .dataA (rxInErrCntRx), .clockB (clkMgmt), .dataB (rxInErrCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uRxOutSfpCnt (
-        .clockA (clkUsr), .dataA (rxOutSfpCntUsr), .clockB (clkMgmt), .dataB (rxOutSfpCnt)
+        .dataA (rxOutSfpCntUsr), .clockB (clkMgmt), .dataB (rxOutSfpCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uRxOutEfpCnt (
-        .clockA (clkUsr), .dataA (rxOutEfpCntUsr), .clockB (clkMgmt), .dataB (rxOutEfpCnt)
+        .dataA (rxOutEfpCntUsr), .clockB (clkMgmt), .dataB (rxOutEfpCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uRxOutVbCnt (
-        .clockA (clkUsr), .dataA (rxOutVbCntUsr), .clockB (clkMgmt), .dataB (rxOutVbCnt)
+        .dataA (rxOutVbCntUsr), .clockB (clkMgmt), .dataB (rxOutVbCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uRxOutValidCnt (
-        .clockA (clkUsr), .dataA (rxOutValidCntUsr), .clockB (clkMgmt), .dataB (rxOutValidCnt)
+        .dataA (rxOutValidCntUsr), .clockB (clkMgmt), .dataB (rxOutValidCnt)
     );
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W8)) uRxOutErrCnt (
-        .clockA (clkUsr), .dataA (rxOutErrCntUsr), .clockB (clkMgmt), .dataB (rxOutErrCnt)
+        .dataA (rxOutErrCntUsr), .clockB (clkMgmt), .dataB (rxOutErrCnt)
     );
 
 //======================================================

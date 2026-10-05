@@ -16,7 +16,7 @@
 // -FHDR----------------------------------------------------------------------------
 module IP_DataGraySync(/*autoarg*/
         //Inputs
-        clockA, dataA, clockB,
+        dataA, clockB,
         //Outputs
         dataB
 );
@@ -26,7 +26,7 @@ parameter DATAWIDTH = 16;
 //Interface
 //###################################################### 
 
-input  clockA;
+//input  clockA;
 input  [DATAWIDTH-1:0] dataA;
 input  clockB;
 output [DATAWIDTH-1:0] dataB;
@@ -45,17 +45,18 @@ wire [DATAWIDTH-1:0] dataDeGrayB;
 //###################################################### 
 
     assign dataGrayA = dataA ^ {1'd0,dataA[DATAWIDTH-1:1]};
-    always@(posedge clockA )begin
+    always@(posedge clockB )begin
         dataGrayAF1 <= dataGrayA;
         dataGrayAF2 <= dataGrayAF1;
     end
 
     generate  
         genvar i;
-        for(i=0;i<ADDR_WIDTH;i=i+1)begin:GRAYLIFT
-            assign dataDeGrayB[i] = dataGrayAF2[i] ^ dataGrayAF1[i+1];
+        for(i=0;i<DATAWIDTH-1;i=i+1)begin:GRAYLIFT
+            assign dataDeGrayB[i] = dataGrayAF2[i] ^ dataGrayAF2[i+1];
         end
     endgenerate
+    assign dataDeGrayB[DATAWIDTH-1] = dataGrayAF2[DATAWIDTH-1];
 
     assign dataB = dataDeGrayB;
 

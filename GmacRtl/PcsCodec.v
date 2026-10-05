@@ -19,6 +19,7 @@
 // 2026/10/01   fxdqe           1.5                     去掉环回 GmacFifoRst
 // 2026/10/03   fxdqe           1.6                     环回 Pop 积 4 个码组后启动
 // 2026/10/04   fxdqe           1.7                     环回 AlFull/AlEmpty 阈值改寄存器
+// 2026/10/05   fxdqe           1.8                     同步器去掉源时钟端口
 // -FHDR----------------------------------------------------------------------------
 
 `include "GmacIf.vh"
@@ -184,7 +185,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
 //======================================================
 
     IP_Sync #(.DATA_WIDTH(1)) uTxEn (
-        .clockIn  (clkMgmt),
         .clockOut (clkTx),
         .reset    (rstNTx),
         .dataIn   (txEn),
@@ -192,7 +192,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uRxEn (
-        .clockIn  (clkMgmt),
         .clockOut (clkRx),
         .reset    (rstNRx),
         .dataIn   (rxEn),
@@ -200,7 +199,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uLoopbackTx (
-        .clockIn  (clkMgmt),
         .clockOut (clkTx),
         .reset    (rstNTx),
         .dataIn   (loopback),
@@ -208,7 +206,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uLoopbackRx (
-        .clockIn  (clkMgmt),
         .clockOut (clkRx),
         .reset    (rstNRx),
         .dataIn   (loopback),
@@ -216,7 +213,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(8)) uLbAlFullThrd (
-        .clockIn  (clkMgmt),
         .clockOut (clkTx),
         .reset    (rstNTx),
         .dataIn   (loopbackAlFullThrd),
@@ -224,7 +220,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(8)) uLbAlEmptyThrdTx (
-        .clockIn  (clkMgmt),
         .clockOut (clkTx),
         .reset    (rstNTx),
         .dataIn   (loopbackAlEmptyThrd),
@@ -232,7 +227,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(8)) uLbAlEmptyThrdRx (
-        .clockIn  (clkMgmt),
         .clockOut (clkRx),
         .reset    (rstNRx),
         .dataIn   (loopbackAlEmptyThrd),
@@ -240,7 +234,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uPcsRxSyncMgmt (
-        .clockIn  (clkRx),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (sync2DecSyncStatus),
@@ -248,7 +241,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(2)) uPcsTxState (
-        .clockIn  (clkTx),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (pcsTxStateTx),
@@ -256,7 +248,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uPcsTxEven (
-        .clockIn  (clkTx),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (pcsTxEvenTx),
@@ -264,7 +255,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uPcsTxRd (
-        .clockIn  (clkTx),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (pcsTxRdTx),
@@ -272,7 +262,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(3)) uPcsRxSyncState (
-        .clockIn  (clkRx),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (pcsRxSyncStateRx),
@@ -280,7 +269,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uPcsRxEven (
-        .clockIn  (clkRx),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (pcsRxEvenRx),
@@ -288,7 +276,6 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uPcsRxRd (
-        .clockIn  (clkRx),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (pcsRxRdRx),
@@ -296,14 +283,12 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uLossOfSyncCnt (
-        .clockA (clkRx),
         .dataA  (lossOfSyncCntRx),
         .clockB (clkMgmt),
         .dataB  (lossOfSyncCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uCodeVCnt (
-        .clockA (clkRx),
         .dataA  (codeVCntRx),
         .clockB (clkMgmt),
         .dataB  (codeVCnt)

@@ -18,13 +18,14 @@
 // 2026/10/01   fxdqe           1.6                     分域复位改 IP_ResetSync
 // 2026/10/04   fxdqe           1.7                     Pop 改独热两段式，时序只采样
 // 2026/10/04   fxdqe           1.8                     读侧水位改 gbxRxFifoThrd
+// 2026/10/05   fxdqe           1.9                     同步器去掉源时钟端口
 // -FHDR----------------------------------------------------------------------------
 
 `include "GmacIf.vh"
 
 module PcsSdsGbxRx(/*autoarg*/
         //Inputs
-        clkSdsRx, clkRx, clkMgmt, rstN, gbxRxFifoThrd, sds2GbxRxBusData,
+        clkSdsRx, clkRx, rstN, gbxRxFifoThrd, sds2GbxRxBusData, 
         //Outputs
         gbx2PcsCodeBusCodeGroup
 );
@@ -45,7 +46,6 @@ localparam [PTR_W-1:0] AL_FULL_THRD = FIFO_DEPTH[PTR_W-1:0] - PTR_THREE;
 
 input                   clkSdsRx;
 input                   clkRx;
-input                   clkMgmt;
 input                   rstN;
 
 input  [7:0]              gbxRxFifoThrd;
@@ -115,7 +115,6 @@ wire [`GMAC_CODE_W-1:0] gbx2PcsCodeBusCodeGroupInt;
 //======================================================
 
     IP_Sync #(.DATA_WIDTH(8)) uGbxRxFifoThrd (
-        .clockIn  (clkMgmt),
         .clockOut (clkRx),
         .reset    (rstNRx),
         .dataIn   (gbxRxFifoThrd),

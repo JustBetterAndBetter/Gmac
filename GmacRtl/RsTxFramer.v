@@ -94,7 +94,6 @@ wire                            addPreamInt;
 reg  [`GMAC_BYTE_W-1:0]         cdc2RsPktBusDataLock;
 reg                             cdc2RsPktBusSfpLock;
 reg                             cdc2RsPktBusEfpLock;
-reg                             cdc2RsPktBusErrLock;
 reg                             storeDataValid;
 wire                            storeDataValidInt;
 wire                            storeFree;
@@ -206,7 +205,7 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
     assign takeLock      = startPkt & ~inPkt;
     assign storeBusy     = storeDataValid & ~storeFree & transferData;
     assign ifgCntHit     = (tailStallCnt + 5'd1) >= {1'd0, ifgCntLock};
-    assign ifgSkip       = fcsLast & (tailStallCnt >= ifgCntLock);
+    assign ifgSkip       = fcsLast & (tailStallCnt >= {1'd0,ifgCntLock});
     assign selFcs        = inFcs | underrunLong;
     assign selPad        = inPad | underrunShort;
     assign sfpFromBus    = cdc2RsPktBusSfp & pcsReady;
@@ -261,7 +260,6 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
             cdc2RsPktBusDataLock <= cdc2RsPktBusData;
             cdc2RsPktBusSfpLock  <= cdc2RsPktBusSfp;
             cdc2RsPktBusEfpLock  <= cdc2RsPktBusEfp;
-            cdc2RsPktBusErrLock  <= cdc2RsPktBusErr;
         end
     end
 
@@ -283,7 +281,7 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
 
     always@(posedge clkTx or negedge rstN) begin
         if (!rstN) begin
-            preamSeqData  <= {7{8'h55}, 8'hd5};
+            preamSeqData  <= {{7{8'h55}}, 8'hd5};
             preamSeqJudge <= 8'h1;
         end
         else if (preamFire) begin

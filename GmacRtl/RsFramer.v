@@ -17,6 +17,7 @@
 // 2026/10/02   fxdqe           1.4                     帧长配置同步到 clkTx
 // 2026/10/03   fxdqe           1.5                     去掉 rsTxState / ifgCnt，Tx 计数改 16 位
 // 2026/10/03   fxdqe           1.6                     rxDelCrc 同步到 clkRx
+// 2026/10/05   fxdqe           1.7                     同步器去掉源时钟端口
 // -FHDR----------------------------------------------------------------------------
 
 `include "GmacIf.vh"
@@ -144,7 +145,6 @@ wire [`GMAC_CNT_W32-1:0]   rxSfdCntRx;
 //======================================================
 
     IP_Sync #(.DATA_WIDTH(4)) uIfgCntMax (
-        .clockIn  (clkMgmt),
         .clockOut (clkTx),
         .reset    (rstNTx),
         .dataIn   (ifgCntMax),
@@ -152,7 +152,6 @@ wire [`GMAC_CNT_W32-1:0]   rxSfdCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(11)) uLenCntMin (
-        .clockIn  (clkMgmt),
         .clockOut (clkTx),
         .reset    (rstNTx),
         .dataIn   (lenCntMin),
@@ -160,7 +159,6 @@ wire [`GMAC_CNT_W32-1:0]   rxSfdCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(11)) uLenCntMax (
-        .clockIn  (clkMgmt),
         .clockOut (clkTx),
         .reset    (rstNTx),
         .dataIn   (lenCntMax),
@@ -168,7 +166,6 @@ wire [`GMAC_CNT_W32-1:0]   rxSfdCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uRxDelCrc (
-        .clockIn  (clkMgmt),
         .clockOut (clkRx),
         .reset    (rstNRx),
         .dataIn   (rxDelCrc),
@@ -176,7 +173,6 @@ wire [`GMAC_CNT_W32-1:0]   rxSfdCntRx;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uTxBusy (
-        .clockIn  (clkTx),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (txBusyTx),
@@ -184,35 +180,30 @@ wire [`GMAC_CNT_W32-1:0]   rxSfdCntRx;
     );
 
     IP_DataGraySync #(.DATAWIDTH(11)) uPadCnt (
-        .clockA (clkTx),
         .dataA  (padCntTx),
         .clockB (clkMgmt),
         .dataB  (padCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uTxOversizeCnt (
-        .clockA (clkTx),
         .dataA  (txOversizeCntTx),
         .clockB (clkMgmt),
         .dataB  (txOversizeCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uTxUnderrunCnt (
-        .clockA (clkTx),
         .dataA  (txUnderrunCntTx),
         .clockB (clkMgmt),
         .dataB  (txUnderrunCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W16)) uTxSfdCnt (
-        .clockA (clkTx),
         .dataA  (txSfdCntTx),
         .clockB (clkMgmt),
         .dataB  (txSfdCnt)
     );
 
     IP_Sync #(.DATA_WIDTH(2)) uRsRxState (
-        .clockIn  (clkRx),
         .clockOut (clkMgmt),
         .reset    (rstNMgmt),
         .dataIn   (rsRxStateRx),
@@ -220,14 +211,12 @@ wire [`GMAC_CNT_W32-1:0]   rxSfdCntRx;
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uRxCrcErrCnt (
-        .clockA (clkRx),
         .dataA  (rxCrcErrCntRx),
         .clockB (clkMgmt),
         .dataB  (rxCrcErrCnt)
     );
 
     IP_DataGraySync #(.DATAWIDTH(`GMAC_CNT_W32)) uRxSfdCnt (
-        .clockA (clkRx),
         .dataA  (rxSfdCntRx),
         .clockB (clkMgmt),
         .dataB  (rxSfdCnt)

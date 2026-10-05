@@ -16,7 +16,7 @@
 // -FHDR----------------------------------------------------------------------------
 module IP_Sync(/*autoarg*/
         //Inputs
-        clockIn, clockOut, reset, dataIn, 
+        clockOut, reset, dataIn, 
         //Outputs
         dataOut
 );
@@ -27,7 +27,7 @@ parameter  DATA_WIDTH=1;
 //Interface
 //###################################################### 
 
-input    clockIn;
+//input    clockIn;
 input    clockOut;
 
 input    reset;

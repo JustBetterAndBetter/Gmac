@@ -448,7 +448,6 @@ wire [`GMAC_ADDR_W-1:0]    irqClrAddr;
         .clkSdsTx                  (clkSdsTx),
         .clkRx                     (clkRx),
         .clkSdsRx                  (clkSdsRx),
-        .clkMgmt                   (clkMgmt),
         .rstN                      (rstNCore),
         .gbxTxFifoThrd             (gbxTxFifoThrd),
         .gbxRxFifoThrd             (gbxRxFifoThrd),

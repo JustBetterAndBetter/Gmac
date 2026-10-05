@@ -14,6 +14,7 @@
 // 2026/10/01   fxdqe           1.0                     Original
 // 2026/10/01   fxdqe           1.1                     去掉 force 保持
 // 2026/10/01   fxdqe           1.2                     同步复位改为端口，输出改名
+// 2026/10/05   fxdqe           1.3                     IP_Sync 去掉 clockIn
 // -FHDR----------------------------------------------------------------------------
 module IP_DulResetSync(/*autoarg*/
         //Inputs
@@ -51,7 +52,6 @@ wire                    wantRstInInOut;
 
     // 对端复位请求同步到本侧时钟；同步器复位用本侧（输出）时钟域复位。
     IP_Sync #(.DATA_WIDTH(1)) uWantOutInIn (
-        .clockIn  (clockOut),
         .clockOut (clockIn),
         .reset    (resetInSync),
         .dataIn   (wantRstOut),
@@ -59,7 +59,6 @@ wire                    wantRstInInOut;
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uWantInInOut (
-        .clockIn  (clockIn),
         .clockOut (clockOut),
         .reset    (resetOutSync),
         .dataIn   (wantRstIn),

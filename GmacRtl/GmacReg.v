@@ -2,7 +2,7 @@
 // Device        : Xilinx
 // Author        : Auto Generated
 // Email         : 
-// Created On    : 2026/10/04 22:09
+// Created On    : 2026/10/05 08:45
 // File Name     : GmacReg.v
 // Description   : Auto generated register module
 //         
@@ -11,7 +11,7 @@
 // Modification History:
 // Date         By              Version                 Change Description
 // ---------------------------------------------------------------------------------
-// 2026/10/04 22:09   Auto Generated   1.0                     Original
+// 2026/10/05 08:45   Auto Generated   1.0                     Original
 // -FHDR----------------------------------------------------------------------------
 module GmacReg(/*autoarg*/
         //Inputs
@@ -168,10 +168,12 @@ reg           wrHitLevel0_7;
 reg           wrLevel0_7Err;
 wire  [3:0]   wrDecodeLevel0_4;
 wire  [3:0]   wrDecodeLevel0_7;
-wire          rdHitDecode;
 reg   [31:0]  rdAddrF1;
 reg   [31:0]  wrAddrF1;
 reg   [31:0]  wrDataF1;
+reg           rdReqF1;
+reg           wrReqF1;
+reg           rdReqLevel1;
 
 reg  [3:0]   rdSelLevel1_0;
 wire         rdHitLevel1_0_wire;
@@ -195,6 +197,7 @@ always@(posedge clock or negedge rstN)begin
         rdAddrF1 <= 32'h0;
         wrAddrF1 <= 32'h0;
         wrDataF1 <= 32'h0;
+        rdReqF1 <= 1'd0;
         rdHitLevel0_0 <= 1'd0;
         rdHitLevel0_4 <= 1'd0;
         rdHitLevel0_5 <= 1'd0;
@@ -205,6 +208,7 @@ always@(posedge clock or negedge rstN)begin
         rdAddrF1 <= rdAddr;
         wrAddrF1 <= wrAddr;
         wrDataF1 <= wrData;
+        rdReqF1 <= rd;
         rdHitLevel0_0 <= rd && ((rdAddr[31:6] == 26'h0));
         rdHitLevel0_4 <= rd && ((rdAddr[31:6] == 26'h4));
         rdHitLevel0_5 <= rd && ((rdAddr[31:6] == 26'h5));
@@ -218,8 +222,8 @@ always@(*) begin
     rdLevel0_0Err = 1'd0;
     case(rdDecodeLevel0_0)
         4'd0:rdDataLevel0_0 = date;
-        4'd1:rdDataLevel0_0 = user;
-        4'd2:rdDataLevel0_0 = version;
+        4'd1:rdDataLevel0_0 = {16'd0, user};
+        4'd2:rdDataLevel0_0 = {16'd0, version};
         default:begin 
             rdDataLevel0_0 = rdAddrErrData;
             rdLevel0_0Err = rdHitLevel0_0;
@@ -230,20 +234,20 @@ assign rdDecodeLevel0_4 = rdAddrF1[5:2];
 always@(*) begin
     rdLevel0_4Err = 1'd0;
     case(rdDecodeLevel0_4)
-        4'd0:rdDataLevel0_4 = softRstN;
-        4'd1:rdDataLevel0_4 = txEn;
-        4'd2:rdDataLevel0_4 = rxEn;
-        4'd3:rdDataLevel0_4 = loopback;
-        4'd5:rdDataLevel0_4 = fifoTxFifoThrd;
+        4'd0:rdDataLevel0_4 = {31'd0, softRstN};
+        4'd1:rdDataLevel0_4 = {31'd0, txEn};
+        4'd2:rdDataLevel0_4 = {31'd0, rxEn};
+        4'd3:rdDataLevel0_4 = {31'd0, loopback};
+        4'd5:rdDataLevel0_4 = {24'd0, fifoTxFifoThrd};
         4'd6:rdDataLevel0_4 = irqMask;
-        4'd7:rdDataLevel0_4 = ifgCntMax;
-        4'd8:rdDataLevel0_4 = txFifoLevel;
-        4'd9:rdDataLevel0_4 = rxFifoLevel;
-        4'd10:rdDataLevel0_4 = fifoAlFull;
-        4'd11:rdDataLevel0_4 = txFifoPeakCnt;
-        4'd12:rdDataLevel0_4 = rxFifoPeakCnt;
-        4'd13:rdDataLevel0_4 = txBusy;
-        4'd15:rdDataLevel0_4 = rsRxState;
+        4'd7:rdDataLevel0_4 = {28'd0, ifgCntMax};
+        4'd8:rdDataLevel0_4 = {24'd0, txFifoLevel};
+        4'd9:rdDataLevel0_4 = {24'd0, rxFifoLevel};
+        4'd10:rdDataLevel0_4 = {31'd0, fifoAlFull};
+        4'd11:rdDataLevel0_4 = {24'd0, txFifoPeakCnt};
+        4'd12:rdDataLevel0_4 = {24'd0, rxFifoPeakCnt};
+        4'd13:rdDataLevel0_4 = {31'd0, txBusy};
+        4'd15:rdDataLevel0_4 = {30'd0, rsRxState};
         default:begin 
             rdDataLevel0_4 = rdAddrErrData;
             rdLevel0_4Err = rdHitLevel0_4;
@@ -254,21 +258,21 @@ assign rdDecodeLevel0_5 = rdAddrF1[5:2];
 always@(*) begin
     rdLevel0_5Err = 1'd0;
     case(rdDecodeLevel0_5)
-        4'd0:rdDataLevel0_5 = padCnt;
-        4'd2:rdDataLevel0_5 = pcsRxSync;
-        4'd3:rdDataLevel0_5 = pcsTxState;
-        4'd4:rdDataLevel0_5 = pcsTxEven;
-        4'd5:rdDataLevel0_5 = pcsTxRd;
-        4'd6:rdDataLevel0_5 = pcsRxSyncState;
-        4'd7:rdDataLevel0_5 = pcsRxEven;
-        4'd8:rdDataLevel0_5 = pcsRxRd;
+        4'd0:rdDataLevel0_5 = {21'd0, padCnt};
+        4'd2:rdDataLevel0_5 = {31'd0, pcsRxSync};
+        4'd3:rdDataLevel0_5 = {30'd0, pcsTxState};
+        4'd4:rdDataLevel0_5 = {31'd0, pcsTxEven};
+        4'd5:rdDataLevel0_5 = {31'd0, pcsTxRd};
+        4'd6:rdDataLevel0_5 = {29'd0, pcsRxSyncState};
+        4'd7:rdDataLevel0_5 = {31'd0, pcsRxEven};
+        4'd8:rdDataLevel0_5 = {31'd0, pcsRxRd};
         4'd9:rdDataLevel0_5 = irqRaw;
         4'd10:rdDataLevel0_5 = txOverRunCnt;
         4'd11:rdDataLevel0_5 = txUnderRunCnt;
         4'd12:rdDataLevel0_5 = rxOverflowCnt;
         4'd13:rdDataLevel0_5 = txVbErrCnt;
-        4'd14:rdDataLevel0_5 = txOversizeCnt;
-        4'd15:rdDataLevel0_5 = txUnderrunCnt;
+        4'd14:rdDataLevel0_5 = {16'd0, txOversizeCnt};
+        4'd15:rdDataLevel0_5 = {16'd0, txUnderrunCnt};
         default:begin 
             rdDataLevel0_5 = rdAddrErrData;
             rdLevel0_5Err = rdHitLevel0_5;
@@ -280,21 +284,21 @@ always@(*) begin
     rdLevel0_6Err = 1'd0;
     case(rdDecodeLevel0_6)
         4'd0:rdDataLevel0_6 = rxCrcErrCnt;
-        4'd1:rdDataLevel0_6 = txSfdCnt;
+        4'd1:rdDataLevel0_6 = {16'd0, txSfdCnt};
         4'd2:rdDataLevel0_6 = rxSfdCnt;
         4'd3:rdDataLevel0_6 = lossOfSyncCnt;
         4'd4:rdDataLevel0_6 = codeVCnt;
-        4'd5:rdDataLevel0_6 = txInSfpCnt;
-        4'd6:rdDataLevel0_6 = txInEfpCnt;
+        4'd5:rdDataLevel0_6 = {16'd0, txInSfpCnt};
+        4'd6:rdDataLevel0_6 = {16'd0, txInEfpCnt};
         4'd7:rdDataLevel0_6 = txInVbCnt;
         4'd8:rdDataLevel0_6 = txInValidCnt;
-        4'd9:rdDataLevel0_6 = txInErrCnt;
-        4'd10:rdDataLevel0_6 = txOutSfpCnt;
-        4'd11:rdDataLevel0_6 = txOutEfpCnt;
+        4'd9:rdDataLevel0_6 = {24'd0, txInErrCnt};
+        4'd10:rdDataLevel0_6 = {16'd0, txOutSfpCnt};
+        4'd11:rdDataLevel0_6 = {16'd0, txOutEfpCnt};
         4'd12:rdDataLevel0_6 = txOutVbCnt;
         4'd13:rdDataLevel0_6 = txOutValidCnt;
-        4'd14:rdDataLevel0_6 = txOutErrCnt;
-        4'd15:rdDataLevel0_6 = rxInSfpCnt;
+        4'd14:rdDataLevel0_6 = {24'd0, txOutErrCnt};
+        4'd15:rdDataLevel0_6 = {16'd0, rxInSfpCnt};
         default:begin 
             rdDataLevel0_6 = rdAddrErrData;
             rdLevel0_6Err = rdHitLevel0_6;
@@ -305,22 +309,22 @@ assign rdDecodeLevel0_7 = rdAddrF1[5:2];
 always@(*) begin
     rdLevel0_7Err = 1'd0;
     case(rdDecodeLevel0_7)
-        4'd0:rdDataLevel0_7 = rxInEfpCnt;
+        4'd0:rdDataLevel0_7 = {16'd0, rxInEfpCnt};
         4'd1:rdDataLevel0_7 = rxInVbCnt;
         4'd2:rdDataLevel0_7 = rxInValidCnt;
-        4'd3:rdDataLevel0_7 = rxInErrCnt;
-        4'd4:rdDataLevel0_7 = rxOutSfpCnt;
-        4'd5:rdDataLevel0_7 = rxOutEfpCnt;
+        4'd3:rdDataLevel0_7 = {24'd0, rxInErrCnt};
+        4'd4:rdDataLevel0_7 = {16'd0, rxOutSfpCnt};
+        4'd5:rdDataLevel0_7 = {16'd0, rxOutEfpCnt};
         4'd6:rdDataLevel0_7 = rxOutVbCnt;
         4'd7:rdDataLevel0_7 = rxOutValidCnt;
-        4'd8:rdDataLevel0_7 = rxOutErrCnt;
-        4'd9:rdDataLevel0_7 = lenCntMin;
-        4'd10:rdDataLevel0_7 = lenCntMax;
-        4'd11:rdDataLevel0_7 = rxDelCrc;
-        4'd12:rdDataLevel0_7 = loopbackAlFullThrd;
-        4'd13:rdDataLevel0_7 = loopbackAlEmptyThrd;
-        4'd14:rdDataLevel0_7 = gbxTxFifoThrd;
-        4'd15:rdDataLevel0_7 = gbxRxFifoThrd;
+        4'd8:rdDataLevel0_7 = {24'd0, rxOutErrCnt};
+        4'd9:rdDataLevel0_7 = {21'd0, lenCntMin};
+        4'd10:rdDataLevel0_7 = {21'd0, lenCntMax};
+        4'd11:rdDataLevel0_7 = {31'd0, rxDelCrc};
+        4'd12:rdDataLevel0_7 = {24'd0, loopbackAlFullThrd};
+        4'd13:rdDataLevel0_7 = {24'd0, loopbackAlEmptyThrd};
+        4'd14:rdDataLevel0_7 = {24'd0, gbxTxFifoThrd};
+        4'd15:rdDataLevel0_7 = {24'd0, gbxRxFifoThrd};
         default:begin 
             rdDataLevel0_7 = rdAddrErrData;
             rdLevel0_7Err = rdHitLevel0_7;
@@ -365,23 +369,32 @@ always@(posedge clock or negedge rstN)begin
         rdDataLevel1_0 <= 32'h0;
         rdHitLevel1_0 <= 1'd0;
         rdLevel1_0Err <= 1'd0;
+        rdReqLevel1 <= 1'd0;
     end
     else begin
         rdDataLevel1_0 <= rdDataLevel1_0_comb;
         rdHitLevel1_0 <= rdHitLevel1_0_wire;
         rdLevel1_0Err <= rdLevel1_0Err_comb;
+        rdReqLevel1 <= rdReqF1;
     end
 end
 
-assign rdData = rdHitLevel1_0 ? rdDataLevel1_0 : rdAddrErrData;
+always@(*) begin
+    rdData = rdHitLevel1_0 ? rdDataLevel1_0 : rdAddrErrData;
+end
 
-assign rdAck = rdHitLevel1_0;
-assign rdErr = rdLevel1_0Err;
+always@(*) begin
+    rdAck = rdHitLevel1_0 || (rdReqLevel1 && !rdHitLevel1_0);
+end
+always@(*) begin
+    rdErr = (rdHitLevel1_0 ? rdLevel1_0Err : 1'd0) || (rdReqLevel1 && !rdHitLevel1_0);
+end
 
 //Write Part
 
 always@(posedge clock or negedge rstN)begin
     if(!rstN)begin
+        wrReqF1 <= 1'd0;
         wrHitLevel0_0 <= 1'd0;
         wrHitLevel0_4 <= 1'd0;
         wrHitLevel0_5 <= 1'd0;
@@ -389,6 +402,7 @@ always@(posedge clock or negedge rstN)begin
         wrHitLevel0_7 <= 1'd0;
     end
     else begin
+        wrReqF1 <= wr;
         wrHitLevel0_0 <= wr && ((wrAddr[31:6] == 26'h0));
         wrHitLevel0_4 <= wr && ((wrAddr[31:6] == 26'h4));
         wrHitLevel0_5 <= wr && ((wrAddr[31:6] == 26'h5));
@@ -397,7 +411,7 @@ always@(posedge clock or negedge rstN)begin
     end
 end
 
-assign wrAck = wrHitLevel0_0 || wrHitLevel0_4 || wrHitLevel0_5 || wrHitLevel0_6 || wrHitLevel0_7;
+assign wrAck = wrReqF1;
 assign wrLevel0_0Err = wrHitLevel0_0;
 assign wrDecodeLevel0_4 = wrAddrF1[5:2];
 always@(*) begin
@@ -425,13 +439,13 @@ always@(posedge clock or negedge rstN) begin
     else begin
         if(wrHitLevel0_4)begin
             case(wrDecodeLevel0_4)
-                4'd0:softRstN             <= wrDataF1;
-                4'd1:txEn             <= wrDataF1;
-                4'd2:rxEn             <= wrDataF1;
-                4'd3:loopback             <= wrDataF1;
-                4'd5:fifoTxFifoThrd             <= wrDataF1;
+                4'd0:softRstN             <= wrDataF1[0];
+                4'd1:txEn             <= wrDataF1[0];
+                4'd2:rxEn             <= wrDataF1[0];
+                4'd3:loopback             <= wrDataF1[0];
+                4'd5:fifoTxFifoThrd             <= wrDataF1[7:0];
                 4'd6:irqMask             <= wrDataF1;
-                4'd7:ifgCntMax             <= wrDataF1;
+                4'd7:ifgCntMax             <= wrDataF1[3:0];
                 default:;
             endcase
         end
@@ -465,18 +479,19 @@ always@(posedge clock or negedge rstN) begin
     else begin
         if(wrHitLevel0_7)begin
             case(wrDecodeLevel0_7)
-                4'd9:lenCntMin             <= wrDataF1;
-                4'd10:lenCntMax             <= wrDataF1;
-                4'd11:rxDelCrc             <= wrDataF1;
-                4'd12:loopbackAlFullThrd             <= wrDataF1;
-                4'd13:loopbackAlEmptyThrd             <= wrDataF1;
-                4'd14:gbxTxFifoThrd             <= wrDataF1;
-                4'd15:gbxRxFifoThrd             <= wrDataF1;
+                4'd9:lenCntMin             <= wrDataF1[10:0];
+                4'd10:lenCntMax             <= wrDataF1[10:0];
+                4'd11:rxDelCrc             <= wrDataF1[0];
+                4'd12:loopbackAlFullThrd             <= wrDataF1[7:0];
+                4'd13:loopbackAlEmptyThrd             <= wrDataF1[7:0];
+                4'd14:gbxTxFifoThrd             <= wrDataF1[7:0];
+                4'd15:gbxRxFifoThrd             <= wrDataF1[7:0];
                 default:;
             endcase
         end
     end
 end
-assign wrErr = wrLevel0_0Err || wrLevel0_4Err || wrLevel0_5Err || wrLevel0_6Err || wrLevel0_7Err;
+    assign wrErr = wrLevel0_0Err || wrLevel0_4Err || wrLevel0_5Err || wrLevel0_6Err || wrLevel0_7Err || 
+    (wrReqF1 && !(wrHitLevel0_0 || wrHitLevel0_4 || wrHitLevel0_5 || wrHitLevel0_6 || wrHitLevel0_7));
 
 endmodule
