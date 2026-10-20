@@ -208,7 +208,8 @@ wire                      ressetOutDouleSync;
                 end
             end
             else if(fifoPush) begin
-                storeData[writeAddr] <= fifoPushData;
+                // writeAddr 含回绕位。深度 16 时地址只有低 ADDR_WIDTH 位，不能把 MSB 算进下标。
+                storeData[writeAddr[ADDR_WIDTH-1:0]] <= fifoPushData;
             end
         end
     endgenerate

@@ -110,6 +110,8 @@
 //
 // 数据通路名统一为 pcs2RsSyncStatus（clkRx）：PcsCodec → RsFramer。
 // 给 GmacReg 的 pcsRxSync 由 PcsCodec 在内部同步到 clkMgmt。
+// 同一锁定再同步到 clkTx。未锁定时 RS 字节仍被 PcsTxEncode 收下，
+// usrTx 报文照常从 FIFO 弹出；码组口只发 /I/，不把报文编出去。
 
 //######################################################
 // 时钟 / 复位

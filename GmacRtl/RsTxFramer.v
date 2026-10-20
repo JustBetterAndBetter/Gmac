@@ -194,13 +194,16 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
     assign underrunLong  = underrun & (pktLenCnt >= lenMinExt);
     assign efpBeat       = storeDataValid & cdc2RsPktBusEfpLock & storeFree;
     assign payloadLast   = efpBeat | underrunShort;
-    assign inPream       = addPream | startPkt;
+    // 下一帧的 SFP 会在本帧最后一字节就出现。这时 inPkt 仍为 1，
+    // 不能把这一拍当成前导，否则出口变成 55，CRC 却仍算缓存里的载荷。
+    assign inPream       = addPream | (startPkt & ~inPkt);
     assign preamFire     = inPream & pcsReady;
     assign preamLast     = preamSeqJudge[7] & pcsReady;
     assign inErr         = cdc2RsPktBusValid & cdc2RsPktBusErr;
-    assign lenFire       = cdc2RsPktBusValid | padBeat | underrunShort;
+    // 前导期间 Valid 一直为 1，不能拿它计帧长，否则前导和下一帧的首字节都会算进来。
+    assign lenFire       = (storeFree & transferData) | padBeat | underrunShort;
     assign lenNext       = pktLenCnt + {15'd0, lenFire};
-    assign crcUpdate     = (cdc2RsPktBusValid & (transferData | startPkt)) | padBeat | underrunShort;
+    assign crcUpdate     = (storeFree & transferData) | padBeat | underrunShort;
     assign frameOn       = startPkt | inPkt;
     assign takeLock      = startPkt & ~inPkt;
     assign storeBusy     = storeDataValid & ~storeFree & transferData;
@@ -246,7 +249,10 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
 //======================================================
 
     assign storeFree         = storeDataValid & pcsReady & ~addPream;
-    assign storeDataValidInt = (storeDataValid | cdc2RsPktBusValid) & ~(storeFree & ~cdc2RsPktBusValid);
+    // 反压时上游这一拍还没被收下，不能因为 Valid 仍为 1 就把已经送出的字节留在缓存里。
+    // 否则 EFP 锁存一直为 1，帧结束后会把同一字节再当成一帧去填充。
+    assign storeDataValidInt = (storeDataValid | (cdc2RsPktBusValid & ~cdc2RsPktBusStall)) &
+                               ~(storeFree & ~(cdc2RsPktBusValid & ~cdc2RsPktBusStall));
 
     always@(posedge clkTx or negedge rstN) begin
         if (!rstN)
@@ -255,8 +261,10 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
             storeDataValid <= storeDataValidInt;
     end
 
+    // 只在上游这一拍真被收下时锁存。Valid 在反压期间保持，字节已经前进，
+    // 若反压时也写，前导会把首字节覆盖成下一字节，线上就少一字节并重复下一字节。
     always@(posedge clkTx) begin
-        if (cdc2RsPktBusValid) begin
+        if (cdc2RsPktBusValid & ~cdc2RsPktBusStall) begin
             cdc2RsPktBusDataLock <= cdc2RsPktBusData;
             cdc2RsPktBusSfpLock  <= cdc2RsPktBusSfp;
             cdc2RsPktBusEfpLock  <= cdc2RsPktBusEfp;
@@ -270,7 +278,7 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
 // 下游 Stall 时 preamFire 为 0，字节停在原位。
 //======================================================
 
-    assign addPreamInt = (addPream | startPkt) & ~preamLast;
+    assign addPreamInt = (addPream | (startPkt & ~inPkt)) & ~preamLast;
 
     always@(posedge clkTx or negedge rstN) begin
         if (!rstN)
@@ -297,7 +305,9 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
 //======================================================
 
     assign transferDataInt    = (transferData | preamLast) & ~endTransferData;
-    assign endTransferDataNor = payloadLast & ~startPad;
+    // EFP 锁存在 FCS 期间被反压留住。若不挡住，endTransferData 每拍都成立，
+    // crcSelect 被反复装回 4'h1，四个 FCS 字节发不出去。
+    assign endTransferDataNor = payloadLast & ~startPad & ~inFcs;
     assign endTransferDataPad = endPad;
     assign endTransferData    = endTransferDataPad | endTransferDataNor | underrunLong;
 
@@ -341,7 +351,8 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
 // 错误帧不取反。帧结束后把 CRC 恢复成初值。
 //======================================================
 
-    assign crcDataIn = cdc2RsPktBusValid ? cdc2RsPktBusData : 8'h0;
+    // 载荷算缓存里的字节。填充和偏短拉断发出的是 00，不能拿缓存里的旧字节来算。
+    assign crcDataIn = selPad ? 8'h0 : cdc2RsPktBusDataLock;
 
     GmacCrc32 uCrc32 (
         .crcIn  (oldCrc),
@@ -408,7 +419,7 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
 // 置位后保持到本帧结束。FCS 四个字节都看这个标志。
 //======================================================
 
-    assign lengTooLong = (pktLenCnt > lenMaxExt) & endTransferData;
+    assign lengTooLong = (pktLenCnt >= lenMaxExt) & endTransferData;
     assign pktErrInt   = (pktErr | inErr | lengTooLong | underrun) & ~endTailStall;
 
     always@(posedge clkTx or negedge rstN) begin
@@ -436,13 +447,16 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
     assign rs2PcsPktBusPreemptable = 1'd0;
     assign txBusy                  = frameOn;
 
+    // FCS 优先于填充和前导。几路叠在一起时不能退回缓存字节。
     always@(*) begin
-        case (finalDataSelect)
-            3'h1:    rs2PcsPktBusData = preamSeqData[63:56];
-            3'h2:    rs2PcsPktBusData = 8'h0;
-            3'h4:    rs2PcsPktBusData = crcDataSel;
-            default: rs2PcsPktBusData = cdc2RsPktBusDataLock;
-        endcase
+        if (selFcs)
+            rs2PcsPktBusData = crcDataSel;
+        else if (selPad)
+            rs2PcsPktBusData = 8'h0;
+        else if (inPream)
+            rs2PcsPktBusData = preamSeqData[63:56];
+        else
+            rs2PcsPktBusData = cdc2RsPktBusDataLock;
     end
 
 //======================================================
@@ -453,7 +467,8 @@ wire [`GMAC_CNT_W32-1:0]        txSfdCntInt;
 
     assign padCntInt        = (startPad | underrunShort) ? (padCnt + 11'd1) : padCnt;
     assign txOversizeCntInt = lengTooLong ? (txOversizeCnt + 16'd1) : txOversizeCnt;
-    assign txSfdCntInt      = (rs2PcsPktBusValid & rs2PcsPktBusSfp) ? (txSfdCnt + 16'd1) : txSfdCnt;
+    // SFP 在前导结束后仍可能停在 1。只在第一个 55 被收下的那一拍加一。
+    assign txSfdCntInt      = (preamFire & preamSeqJudge[0]) ? (txSfdCnt + 16'd1) : txSfdCnt;
     assign txUnderrunCntInt = underrun ? (txUnderrunCnt + 16'd1) : txUnderrunCnt;
 
     always@(posedge clkTx or negedge rstN) begin

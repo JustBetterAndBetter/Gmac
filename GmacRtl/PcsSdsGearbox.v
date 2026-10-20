@@ -21,7 +21,7 @@
 module PcsSdsGearbox(/*autoarg*/
         //Inputs
         clkTx, clkSdsTx, clkRx, clkSdsRx, rstN, gbxTxFifoThrd, 
-        gbxRxFifoThrd, pcs2GbxCodeBusCodeGroup, 
+        gbxRxFifoThrd, pcsTxEven, pcs2GbxCodeBusCodeGroup, 
         sds2GbxRxBusData, 
         //Outputs
         gbx2PcsCodeBusCodeGroup, gbx2SdsTxBusData
@@ -39,6 +39,7 @@ input                   rstN;
 
 input  [7:0]            gbxTxFifoThrd;
 input  [7:0]            gbxRxFifoThrd;
+input                   pcsTxEven;
 
 input  [`GMAC_CODE_W-1:0] pcs2GbxCodeBusCodeGroup;
 output [`GMAC_CODE_W-1:0] gbx2PcsCodeBusCodeGroup;
@@ -59,6 +60,7 @@ input  [`GMAC_SDS_W-1:0]  sds2GbxRxBusData;
         .clkSdsTx                  (clkSdsTx),
         .rstN                      (rstN),
         .gbxTxFifoThrd             (gbxTxFifoThrd),
+        .pcsTxEven                 (pcsTxEven),
         .pcs2GbxCodeBusCodeGroup   (pcs2GbxCodeBusCodeGroup),
         .gbx2SdsTxBusData          (gbx2SdsTxBusData)
     );

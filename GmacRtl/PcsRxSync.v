@@ -7,6 +7,8 @@
 // Description   : Clause 36 码组同步：偶边界 / syncStatus / cgBad。
 //                 尚未选定比特相位时，用上一拍并行找逗号；锁定期间不偏移，失锁后再找。
 //                 状态只有失锁和锁定。逗号级数、滞回由计数器完成。
+//                 对外 Sync 再滤一次抖动：内部锁定连续保持 1024 个码组才置位，
+//                 失锁当拍撤销。clkRx 125 MHz 时约 8.2 us。
 //                 全通路只在这里例化一次 8B/10B 译码，结果打拍交给 Decode。
 //                 rstN 已是 clkRx 域同步释放复位。
 //
@@ -23,6 +25,8 @@
 // 2026/10/04   fxdqe           1.6                     计数下一拍改 assign，集中锁存
 // 2026/10/04   fxdqe           1.7                     初始逗号并行定比特相位
 // 2026/10/04   fxdqe           1.8                     失锁后放开比特相位
+// 2026/10/20   fxdqe           1.9                     Sync 输出连续锁定才置位
+// 2026/10/20   fxdqe           1.10                    失锁时按逗号极性对齐译码 rd
 // -FHDR----------------------------------------------------------------------------
 
 `include "GmacIf.vh"
@@ -59,6 +63,9 @@ output reg [`GMAC_CNT_W32-1:0] lossOfSyncCnt;
 
 localparam [1:0] S_LOSS = 2'b01;
 localparam [1:0] S_SYNC = 2'b10;
+
+// 内部锁定连续这么多个码组，对外才报 Sync。1024 拍 @125 MHz 约 8.2 us。
+localparam [9:0] SYNC_QUAL_MAX = 10'd1023;
 
 // 码组判定。phase 0 表示本拍 10 bit 已对齐，1..9 表示逗号从上一拍对应比特开始。
 wire [9:0]              cgRaw;
@@ -108,6 +115,10 @@ reg                     rxEven;
 wire                    rxEvenInt;
 reg                     rxRd;
 wire [`GMAC_CNT_W32-1:0] lossOfSyncCntInt;
+
+// 输出去抖：未满时计数，满后保持，失锁清零
+reg  [9:0]              syncQualCnt;
+wire [9:0]              syncQualCntInt;
 
 // 译码结果打拍
 reg  [`GMAC_BYTE_W-1:0] octetReg;
@@ -208,9 +219,16 @@ endfunction
                          (cg[8:2]==7'b1111100) | (cg[8:2]==7'b0000011) |
                          (cg[9:3]==7'b1111100) | (cg[9:3]==7'b0000011)) & ~isComma;
 
+    // 失锁后环回码流的运行不一致和译码器可能差一拍。逗号两种极性对应唯一的进入 rd，
+    // 先按逗号把 rd 扳正，下一拍数据才能译出来。锁定后仍用译码器自己的 rd。
+    wire rdDec;
+    assign rdDec = ((state == S_LOSS) && (cg == 10'b0101111100)) ? 1'b0 :
+                   ((state == S_LOSS) && (cg == ~10'b0101111100)) ? 1'b1 :
+                   rxRd;
+
     Gmac8b10bDec uDec (
         .codeGroup  (cg),
-        .rd         (rxRd),
+        .rd         (rdDec),
         .octet      (octetDec),
         .isK        (isKDec),
         .invalid    (invalidDec),
@@ -283,6 +301,14 @@ endfunction
                               lossOfSyncCnt;
 
 //======================================================
+// Sync 输出去抖：连续锁定满 1024 个码组才置位，失锁清零
+//======================================================
+
+    assign syncQualCntInt = (state != S_SYNC) ? 10'd0 :
+                            (syncQualCnt == SYNC_QUAL_MAX) ? syncQualCnt :
+                            syncQualCnt + 10'd1;
+
+//======================================================
 // 计数锁存 @ clkRx
 //======================================================
 
@@ -292,12 +318,14 @@ endfunction
             badLvl        <= 2'd0;
             goodCnt       <= 2'd0;
             lossOfSyncCnt <= {`GMAC_CNT_W32{1'b0}};
+            syncQualCnt   <= 10'd0;
         end
         else begin
             commaCnt      <= commaCntInt;
             badLvl        <= badLvlInt;
             goodCnt       <= goodCntInt;
             lossOfSyncCnt <= lossOfSyncCntInt;
+            syncQualCnt   <= syncQualCntInt;
         end
     end
 
@@ -350,7 +378,7 @@ endfunction
     assign sync2DecIsK        = isKReg;
     assign sync2DecRxRd       = rxRd;
     assign sync2DecRxEven     = rxEven;
-    assign sync2DecSyncStatus = (state == S_SYNC);
+    assign sync2DecSyncStatus = (state == S_SYNC) & (syncQualCnt == SYNC_QUAL_MAX);
     assign sync2DecCgBad      = badReg;
     assign pcsRxSyncState     = (state == S_SYNC) ? (3'd4 + {1'b0, badLvl}) :
                                 {1'b0, commaCnt};

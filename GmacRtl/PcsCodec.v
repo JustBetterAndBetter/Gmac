@@ -20,6 +20,7 @@
 // 2026/10/03   fxdqe           1.6                     环回 Pop 积 4 个码组后启动
 // 2026/10/04   fxdqe           1.7                     环回 AlFull/AlEmpty 阈值改寄存器
 // 2026/10/05   fxdqe           1.8                     同步器去掉源时钟端口
+// 2026/10/20   fxdqe           1.9                     Sync 同步到 clkTx，未锁定时发 /I/
 // -FHDR----------------------------------------------------------------------------
 
 `include "GmacIf.vh"
@@ -35,7 +36,7 @@ module PcsCodec(/*autoarg*/
         rs2PcsPktBusStall, pcs2RsPktBusData, pcs2RsPktBusValid,
         pcs2RsPktBusSfp, pcs2RsPktBusEfp, pcs2RsPktBusErr,
         pcs2RsPktBusPreemptable, pcs2GbxCodeBusCodeGroup,
-        pcs2RsSyncStatus, pcsRxSync, pcsTxState, pcsTxEven, pcsTxRd,
+        pcs2RsSyncStatus, pcsRxSync, pcsTxState, pcsTxEven, pcsTxEvenTx, pcsTxRd,
         pcsRxSyncState, pcsRxEven, pcsRxRd, lossOfSyncCnt, codeVCnt
 );
 
@@ -77,6 +78,7 @@ output                  pcs2RsSyncStatus;
 output                  pcsRxSync;
 output [1:0]            pcsTxState;
 output                  pcsTxEven;
+output                  pcsTxEvenTx;
 output                  pcsTxRd;
 output [2:0]            pcsRxSyncState;
 output                  pcsRxEven;
@@ -101,6 +103,7 @@ wire                       rstNTx;
 wire                       rstNRx;
 wire                       rstNMgmt;
 wire                       txEnTx;
+wire                       syncTx;
 wire                       rxEnRx;
 wire                       loopbackTx;
 wire                       loopbackRx;
@@ -146,7 +149,6 @@ wire                       dec2MarkSyncStatus;
 wire                       dec2MarkCgBad;
 
 wire [1:0]                 pcsTxStateTx;
-wire                       pcsTxEvenTx;
 wire                       pcsTxRdTx;
 wire [2:0]                 pcsRxSyncStateRx;
 wire                       pcsRxEvenRx;
@@ -189,6 +191,14 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
         .reset    (rstNTx),
         .dataIn   (txEn),
         .dataOut  (txEnTx)
+    );
+
+    // 接收锁定到发送域。未锁定时编码只发 /I/，报文仍被前级弹出。
+    IP_Sync #(.DATA_WIDTH(1)) uSyncTx (
+        .clockOut (clkTx),
+        .reset    (rstNTx),
+        .dataIn   (sync2DecSyncStatus),
+        .dataOut  (syncTx)
     );
 
     IP_Sync #(.DATA_WIDTH(1)) uRxEn (
@@ -390,6 +400,7 @@ wire [`GMAC_CNT_W32-1:0]   codeVCntRx;
         .clkTx                     (clkTx),
         .rstN                      (rstNTx),
         .txEn                      (txEnTx),
+        .syncTx                    (syncTx),
         .rs2PcsPktBusData          (rs2PcsPktBusData),
         .rs2PcsPktBusValid         (rs2PcsPktBusValid),
         .rs2PcsPktBusSfp           (rs2PcsPktBusSfp),

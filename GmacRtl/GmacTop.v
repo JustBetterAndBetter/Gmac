@@ -20,21 +20,27 @@
 // 2026/10/03   fxdqe           1.6                     rxDelCrc 接到寄存器
 // 2026/10/04   fxdqe           1.7                     环回 FIFO 水位阈值接到寄存器
 // 2026/10/04   fxdqe           1.8                     Gearbox 读侧水位接到寄存器
+// 2026/10/17   fxdqe           1.9                     接新 GmacReg：softRst 取反，帧长/IFG/水位改固定值
+// 2026/10/17   fxdqe           1.10                    用户口/RS 口 logCnt 接到寄存器
 // -FHDR----------------------------------------------------------------------------
 
 `include "GmacIf.vh"
 
 module GmacTop(/*autoarg*/
         //Inputs
-        clkUsr, clkTx, clkRx, clkSdsTx, clkSdsRx, clkMgmt, rstN,
-        usr2CdcPktBusData, usr2CdcPktBusVb, usr2CdcPktBusValid, usr2CdcPktBusSfp,
-        usr2CdcPktBusEfp, usr2CdcPktBusErr, usr2CdcPktBusPreemptable,
-        sds2GbxRxBusData, wr, wrAddr, wrData, rd, rdAddr,
+        clkUsr, clkTx, clkRx, clkSdsTx, clkSdsRx, clkMgmt, rstN, 
+        usr2CdcPktBusData, usr2CdcPktBusVb, 
+        usr2CdcPktBusValid, usr2CdcPktBusSfp, 
+        usr2CdcPktBusEfp, usr2CdcPktBusErr, 
+        usr2CdcPktBusPreemptable, sds2GbxRxBusData, regBusWr, 
+        regBusWrAddr, regBusWrData, regBusRd, regBusRdAddr, 
         //Outputs
-        usr2CdcPktBusStall, cdc2UsrPktBusData, cdc2UsrPktBusVb, cdc2UsrPktBusValid,
-        cdc2UsrPktBusSfp, cdc2UsrPktBusEfp, cdc2UsrPktBusErr,
-        cdc2UsrPktBusPreemptable, gbx2SdsTxBusData, wrAck, wrErr,
-        rdAck, rdErr, rdData, irq
+        usr2CdcPktBusStall, cdc2UsrPktBusData, cdc2UsrPktBusVb, 
+        cdc2UsrPktBusValid, cdc2UsrPktBusSfp, 
+        cdc2UsrPktBusEfp, cdc2UsrPktBusErr, 
+        cdc2UsrPktBusPreemptable, gbx2SdsTxBusData, 
+        regBusWrAck, regBusWrErr, regBusRdAck, regBusRdErr, 
+        regBusRdData, irq
 );
 
 //######################################################
@@ -76,38 +82,44 @@ output                  cdc2UsrPktBusPreemptable;
 output [`GMAC_SDS_W-1:0]  gbx2SdsTxBusData;
 input  [`GMAC_SDS_W-1:0]  sds2GbxRxBusData;
 
-input                   wr;
-input  [`GMAC_ADDR_W-1:0] wrAddr;
-input  [`GMAC_REG_W-1:0]  wrData;
-output                  wrAck;
-output                  wrErr;
-input                   rd;
-input  [`GMAC_ADDR_W-1:0] rdAddr;
-output                  rdAck;
-output                  rdErr;
-output [`GMAC_REG_W-1:0]  rdData;
-output                  irq;
+input                     regBusWr;
+input  [`GMAC_ADDR_W-1:0] regBusWrAddr;
+input  [`GMAC_REG_W-1:0]  regBusWrData;
+output                    regBusWrAck;
+output                    regBusWrErr;
+input                     regBusRd;
+input  [`GMAC_ADDR_W-1:0] regBusRdAddr;
+output                    regBusRdAck;
+output                    regBusRdErr;
+output [`GMAC_REG_W-1:0]  regBusRdData;
+output                    irq;
 
 //######################################################
 //Value
 //######################################################
 
+wire                       softRst;
 wire                       softRstN;
 wire                       rstNCore;
 wire                       txEn;
 wire                       rxEn;
 wire                       loopback;
 wire [7:0]                 fifoTxFifoThrd;
-wire [7:0]                 loopbackAlFullThrd;
-wire [7:0]                 loopbackAlEmptyThrd;
-wire [7:0]                 gbxTxFifoThrd;
-wire [7:0]                 gbxRxFifoThrd;
-wire [3:0]                 ifgCntMax;
-wire [10:0]                lenCntMin;
-wire [10:0]                lenCntMax;
-wire                       rxDelCrc;
+wire [1:0]                 xmit;
 wire [`GMAC_REG_W-1:0]     irqMask;
 wire [`GMAC_REG_W-1:0]     irqRaw;
+
+// 新寄存器没有帧长、IFG、剥 FCS 和各 FIFO 水位。按 1000BASE-X 固定行为接上。
+// 帧长按不含 FCS 的用户字节：最短 60，最长 1514。IFG 12 字节。接收剥 FCS。
+// Gearbox 水位 0：storeCnt>0 即可读出。环回几乎满 13、几乎空 2，深度 16。
+localparam [3:0]  IFG_CNT_MAX            = 4'd12;
+localparam [10:0] LEN_CNT_MIN            = 11'd60;
+localparam [10:0] LEN_CNT_MAX            = 11'd1514;
+localparam        RX_DEL_CRC             = 1'b1;
+localparam [7:0]  LOOPBACK_AL_FULL_THRD  = 8'd13;
+localparam [7:0]  LOOPBACK_AL_EMPTY_THRD = 8'd2;
+localparam [7:0]  GBX_TX_FIFO_THRD       = 8'd0;
+localparam [7:0]  GBX_RX_FIFO_THRD       = 8'd0;
 
 wire [`GMAC_BYTE_W-1:0]    cdc2RsPktBusData;
 wire                       cdc2RsPktBusValid;
@@ -153,6 +165,23 @@ wire [`GMAC_CNT_W32-1:0]   txVbErrCnt;
 wire [`GMAC_CNT_W8-1:0]    rxFifoLevel;
 wire [`GMAC_CNT_W8-1:0]    rxFifoPeakCnt;
 wire [`GMAC_CNT_W32-1:0]   rxOverflowCnt;
+wire                       txBusy;
+wire [10:0]                padCnt;
+wire [`GMAC_CNT_W16-1:0]   txOversizeCnt;
+wire [`GMAC_CNT_W16-1:0]   txUnderrunCnt;
+wire [`GMAC_CNT_W16-1:0]   txSfdCnt;
+wire [1:0]                 rsRxState;
+wire [`GMAC_CNT_W32-1:0]   rxCrcErrCnt;
+wire [`GMAC_CNT_W32-1:0]   rxSfdCnt;
+wire [1:0]                 pcsTxState;
+wire                       pcsTxEven;
+wire                       pcsTxEvenTx;
+wire                       pcsTxRd;
+wire [2:0]                 pcsRxSyncState;
+wire                       pcsRxEven;
+wire                       pcsRxRd;
+wire [`GMAC_CNT_W32-1:0]   lossOfSyncCnt;
+wire [`GMAC_CNT_W32-1:0]   codeVCnt;
 wire [`GMAC_CNT_W16-1:0]   txInSfpCnt;
 wire [`GMAC_CNT_W16-1:0]   txInEfpCnt;
 wire [`GMAC_CNT_W32-1:0]   txInVbCnt;
@@ -173,22 +202,6 @@ wire [`GMAC_CNT_W16-1:0]   rxOutEfpCnt;
 wire [`GMAC_CNT_W32-1:0]   rxOutVbCnt;
 wire [`GMAC_CNT_W32-1:0]   rxOutValidCnt;
 wire [`GMAC_CNT_W8-1:0]    rxOutErrCnt;
-wire                       txBusy;
-wire [10:0]                padCnt;
-wire [`GMAC_CNT_W16-1:0]   txOversizeCnt;
-wire [`GMAC_CNT_W16-1:0]   txUnderrunCnt;
-wire [`GMAC_CNT_W16-1:0]   txSfdCnt;
-wire [1:0]                 rsRxState;
-wire [`GMAC_CNT_W32-1:0]   rxCrcErrCnt;
-wire [`GMAC_CNT_W32-1:0]   rxSfdCnt;
-wire [1:0]                 pcsTxState;
-wire                       pcsTxEven;
-wire                       pcsTxRd;
-wire [2:0]                 pcsRxSyncState;
-wire                       pcsRxEven;
-wire                       pcsRxRd;
-wire [`GMAC_CNT_W32-1:0]   lossOfSyncCnt;
-wire [`GMAC_CNT_W32-1:0]   codeVCnt;
 reg  [7:0]                 irqEvt;
 reg  [`GMAC_CNT_W32-1:0]   txOverRunCntF1;
 reg  [`GMAC_CNT_W32-1:0]   txUnderRunCntF1;
@@ -210,7 +223,10 @@ wire [`GMAC_ADDR_W-1:0]    irqClrAddr;
 //======================================================
 
     assign irqClrAddr = {{(`GMAC_ADDR_W-9){1'b0}}, 9'h118};
-    assign irqClr     = wr & (wrAddr == irqClrAddr);
+    assign irqClr     = regBusWr & (regBusWrAddr == irqClrAddr);
+
+    // 寄存器 softRst 高有效，复位值 0。GmacRst 要低有效 softRstN。
+    assign softRstN = ~softRst;
 
     GmacRst uGmacRst (
         .clkMgmt  (clkMgmt),
@@ -365,10 +381,10 @@ wire [`GMAC_ADDR_W-1:0]    irqClrAddr;
         .clkRx                     (clkRx),
         .clkMgmt                   (clkMgmt),
         .rstN                      (rstNCore),
-        .ifgCntMax                 (ifgCntMax),
-        .lenCntMin                 (lenCntMin),
-        .lenCntMax                 (lenCntMax),
-        .rxDelCrc                  (rxDelCrc),
+        .ifgCntMax                 (IFG_CNT_MAX),
+        .lenCntMin                 (LEN_CNT_MIN),
+        .lenCntMax                 (LEN_CNT_MAX),
+        .rxDelCrc                  (RX_DEL_CRC),
         .pcs2RsSyncStatus          (pcs2RsSyncStatus),
         .cdc2RsPktBusData          (cdc2RsPktBusData),
         .cdc2RsPktBusValid         (cdc2RsPktBusValid),
@@ -414,8 +430,8 @@ wire [`GMAC_ADDR_W-1:0]    irqClrAddr;
         .txEn                      (txEn),
         .rxEn                      (rxEn),
         .loopback                  (loopback),
-        .loopbackAlFullThrd        (loopbackAlFullThrd),
-        .loopbackAlEmptyThrd       (loopbackAlEmptyThrd),
+        .loopbackAlFullThrd        (LOOPBACK_AL_FULL_THRD),
+        .loopbackAlEmptyThrd       (LOOPBACK_AL_EMPTY_THRD),
         .rs2PcsPktBusData          (rs2PcsPktBusData),
         .rs2PcsPktBusValid         (rs2PcsPktBusValid),
         .rs2PcsPktBusSfp           (rs2PcsPktBusSfp),
@@ -435,6 +451,7 @@ wire [`GMAC_ADDR_W-1:0]    irqClrAddr;
         .pcsRxSync                 (pcsRxSync),
         .pcsTxState                (pcsTxState),
         .pcsTxEven                 (pcsTxEven),
+        .pcsTxEvenTx               (pcsTxEvenTx),
         .pcsTxRd                   (pcsTxRd),
         .pcsRxSyncState            (pcsRxSyncState),
         .pcsRxEven                 (pcsRxEven),
@@ -449,8 +466,9 @@ wire [`GMAC_ADDR_W-1:0]    irqClrAddr;
         .clkRx                     (clkRx),
         .clkSdsRx                  (clkSdsRx),
         .rstN                      (rstNCore),
-        .gbxTxFifoThrd             (gbxTxFifoThrd),
-        .gbxRxFifoThrd             (gbxRxFifoThrd),
+        .gbxTxFifoThrd             (GBX_TX_FIFO_THRD),
+        .gbxRxFifoThrd             (GBX_RX_FIFO_THRD),
+        .pcsTxEven                 (pcsTxEvenTx),
         .pcs2GbxCodeBusCodeGroup   (pcs2GbxCodeBusCodeGroup),
         .gbx2PcsCodeBusCodeGroup   (gbx2PcsCodeBusCodeGroup),
         .gbx2SdsTxBusData          (gbx2SdsTxBusData),
@@ -462,35 +480,28 @@ wire [`GMAC_ADDR_W-1:0]    irqClrAddr;
 //======================================================
 
     GmacReg uGmacReg (
-        .clock                     (clkMgmt),
+        .clkMgmt                   (clkMgmt),
         .rstN                      (rstN),
-        .wr                        (wr),
-        .wrAddr                    (wrAddr),
-        .wrData                    (wrData),
-        .wrAck                     (wrAck),
-        .wrErr                     (wrErr),
-        .rd                        (rd),
-        .rdAddr                    (rdAddr),
-        .rdAck                     (rdAck),
-        .rdErr                     (rdErr),
-        .rdData                    (rdData),
+        .regBusWr                  (regBusWr),
+        .regBusWrAddr              (regBusWrAddr),
+        .regBusWrData              (regBusWrData),
+        .regBusWrAck               (regBusWrAck),
+        .regBusWrErr               (regBusWrErr),
+        .regBusRd                  (regBusRd),
+        .regBusRdAddr              (regBusRdAddr),
+        .regBusRdAck               (regBusRdAck),
+        .regBusRdErr               (regBusRdErr),
+        .regBusRdData              (regBusRdData),
         .date                      (DATE),
         .user                      (USER),
         .version                   (VERSION),
-        .softRstN                  (softRstN),
-        .txEn                      (txEn),
-        .rxEn                      (rxEn),
-        .loopback                  (loopback),
-        .fifoTxFifoThrd            (fifoTxFifoThrd),
-        .ifgCntMax                 (ifgCntMax),
-        .lenCntMin                 (lenCntMin),
-        .lenCntMax                 (lenCntMax),
-        .rxDelCrc                  (rxDelCrc),
-        .loopbackAlFullThrd        (loopbackAlFullThrd),
-        .loopbackAlEmptyThrd       (loopbackAlEmptyThrd),
-        .gbxTxFifoThrd             (gbxTxFifoThrd),
-        .gbxRxFifoThrd             (gbxRxFifoThrd),
         .irqMask                   (irqMask),
+        .fifoTxFifoThrd            (fifoTxFifoThrd),
+        .xmit                      (xmit),
+        .loopback                  (loopback),
+        .rxEn                      (rxEn),
+        .softRst                   (softRst),
+        .txEn                      (txEn),
         .txFifoLevel               (txFifoLevel),
         .rxFifoLevel               (rxFifoLevel),
         .fifoAlFull                (fifoAlFull),
@@ -522,21 +533,21 @@ wire [`GMAC_ADDR_W-1:0]    irqClrAddr;
         .txInEfpCnt                (txInEfpCnt),
         .txInVbCnt                 (txInVbCnt),
         .txInValidCnt              (txInValidCnt),
-        .txInErrCnt                (txInErrCnt),
         .txOutSfpCnt               (txOutSfpCnt),
         .txOutEfpCnt               (txOutEfpCnt),
         .txOutVbCnt                (txOutVbCnt),
         .txOutValidCnt             (txOutValidCnt),
-        .txOutErrCnt               (txOutErrCnt),
         .rxInSfpCnt                (rxInSfpCnt),
         .rxInEfpCnt                (rxInEfpCnt),
         .rxInVbCnt                 (rxInVbCnt),
         .rxInValidCnt              (rxInValidCnt),
-        .rxInErrCnt                (rxInErrCnt),
         .rxOutSfpCnt               (rxOutSfpCnt),
         .rxOutEfpCnt               (rxOutEfpCnt),
         .rxOutVbCnt                (rxOutVbCnt),
         .rxOutValidCnt             (rxOutValidCnt),
+        .txInErrCnt                (txInErrCnt),
+        .txOutErrCnt               (txOutErrCnt),
+        .rxInErrCnt                (rxInErrCnt),
         .rxOutErrCnt               (rxOutErrCnt)
     );
 

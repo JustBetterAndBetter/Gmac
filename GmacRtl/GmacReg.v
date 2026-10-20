@@ -2,496 +2,589 @@
 // Device        : Xilinx
 // Author        : Auto Generated
 // Email         : 
-// Created On    : 2026/10/05 08:45
+// Created On    : 2026/10/16 20:53
 // File Name     : GmacReg.v
-// Description   : Auto generated register module
-//         
+// Description   : 寄存器总线译码。读和写各自建树，第一拍按地址空间最高位比较组命中，组内用 [5:2] 选择。Ack 表示访问完成，Err 表示完成但有错误，二者同一拍有效。
 // 
 // ---------------------------------------------------------------------------------
 // Modification History:
 // Date         By              Version                 Change Description
 // ---------------------------------------------------------------------------------
-// 2026/10/05 08:45   Auto Generated   1.0                     Original
+// 2026/10/16 20:53   Auto Generated   1.0                     Original
 // -FHDR----------------------------------------------------------------------------
 module GmacReg(/*autoarg*/
         //Inputs
-        clock, rstN, wr, wrAddr, wrData, rd, rdAddr, date, user, version, txFifoLevel, rxFifoLevel, fifoAlFull, txFifoPeakCnt, 
-        rxFifoPeakCnt, txBusy, rsRxState, padCnt, pcsRxSync, pcsTxState, pcsTxEven, pcsTxRd, pcsRxSyncState, pcsRxEven, 
-        pcsRxRd, irqRaw, txOverRunCnt, txUnderRunCnt, rxOverflowCnt, txVbErrCnt, txOversizeCnt, txUnderrunCnt, rxCrcErrCnt, 
-        txSfdCnt, rxSfdCnt, lossOfSyncCnt, codeVCnt, txInSfpCnt, txInEfpCnt, txInVbCnt, txInValidCnt, txInErrCnt, txOutSfpCnt, 
-        txOutEfpCnt, txOutVbCnt, txOutValidCnt, txOutErrCnt, rxInSfpCnt, rxInEfpCnt, rxInVbCnt, rxInValidCnt, rxInErrCnt, 
-        rxOutSfpCnt, rxOutEfpCnt, rxOutVbCnt, rxOutValidCnt, rxOutErrCnt,
+        clkMgmt, rstN, regBusWr, regBusWrAddr, regBusWrData, regBusRd, regBusRdAddr, date, user, version, codeVCnt, irqRaw, 
+        lossOfSyncCnt, rxCrcErrCnt, rxOverflowCnt, rxSfdCnt, txOverRunCnt, txUnderRunCnt, txVbErrCnt, txOversizeCnt, txSfdCnt, 
+        txUnderrunCnt, padCnt, rxFifoLevel, rxFifoPeakCnt, txFifoLevel, txFifoPeakCnt, pcsRxSyncState, pcsTxState, rsRxState, 
+        fifoAlFull, pcsRxEven, pcsRxRd, pcsRxSync, pcsTxEven, pcsTxRd, txBusy, txInSfpCnt, txInEfpCnt, txInVbCnt, txInValidCnt, 
+        txOutSfpCnt, txOutEfpCnt, txOutVbCnt, txOutValidCnt, rxInSfpCnt, rxInEfpCnt, rxInVbCnt, rxInValidCnt, rxOutSfpCnt, 
+        rxOutEfpCnt, rxOutVbCnt, rxOutValidCnt, txInErrCnt, txOutErrCnt, rxInErrCnt, rxOutErrCnt,
         //Outputs
-        wrAck, wrErr, rdAck, rdErr, rdData, softRstN, txEn, rxEn, loopback, fifoTxFifoThrd, irqMask, ifgCntMax, lenCntMin, 
-        lenCntMax, rxDelCrc, loopbackAlFullThrd, loopbackAlEmptyThrd, gbxTxFifoThrd, gbxRxFifoThrd
+        regBusWrAck, regBusWrErr, regBusRdAck, regBusRdErr, regBusRdData, irqMask, fifoTxFifoThrd, xmit, loopback, rxEn, 
+        softRst, txEn
 );
 
+//######################################################
+// Interface
+// 寄存器总线为字节地址。32bit 访问时 [7:0] 是该地址上的字节，[31:24] 是更高地址上的字节。多比特字段的低位对应 bit_range 的低位。
+//######################################################
 
+input                  clkMgmt;
+input                  rstN;
 
-//###################################################### 
-//Interface
-//###################################################### 
+input                  regBusWr;
+input  [31:0]          regBusWrAddr;
+input  [31:0]          regBusWrData;
+output reg             regBusWrAck;
+output reg             regBusWrErr;
 
-    input                   clock;
-    input                   rstN;
+input                  regBusRd;
+input  [31:0]          regBusRdAddr;
+output reg             regBusRdAck;
+output reg             regBusRdErr;
+output reg [31:0]      regBusRdData;
 
-    input                  wr;
-    input [31:0]           wrAddr;
-    input [31:0]           wrData;
-    output                 wrAck;
-    output                 wrErr;
-    
-    input                  rd;
-    input [31:0]           rdAddr;
-    output                 rdAck;
-    output                 rdErr;
-    output  [31:0]         rdData;
+input  [31:0]         date;
+input  [15:0]         user;
+input  [15:0]         version;
+output reg [31:0]     irqMask;
+output reg [7:0]      fifoTxFifoThrd;
+output reg [1:0]      xmit;
+output reg            loopback;
+output reg            rxEn;
+output reg            softRst;
+output reg            txEn;
+input  [31:0]         codeVCnt;
+input  [31:0]         irqRaw;
+input  [31:0]         lossOfSyncCnt;
+input  [31:0]         rxCrcErrCnt;
+input  [31:0]         rxOverflowCnt;
+input  [31:0]         rxSfdCnt;
+input  [31:0]         txOverRunCnt;
+input  [31:0]         txUnderRunCnt;
+input  [31:0]         txVbErrCnt;
+input  [15:0]         txOversizeCnt;
+input  [15:0]         txSfdCnt;
+input  [15:0]         txUnderrunCnt;
+input  [10:0]         padCnt;
+input  [7:0]          rxFifoLevel;
+input  [7:0]          rxFifoPeakCnt;
+input  [7:0]          txFifoLevel;
+input  [7:0]          txFifoPeakCnt;
+input  [2:0]          pcsRxSyncState;
+input  [1:0]          pcsTxState;
+input  [1:0]          rsRxState;
+input                 fifoAlFull;
+input                 pcsRxEven;
+input                 pcsRxRd;
+input                 pcsRxSync;
+input                 pcsTxEven;
+input                 pcsTxRd;
+input                 txBusy;
+input  [15:0]         txInSfpCnt;
+input  [15:0]         txInEfpCnt;
+input  [31:0]         txInVbCnt;
+input  [31:0]         txInValidCnt;
+input  [15:0]         txOutSfpCnt;
+input  [15:0]         txOutEfpCnt;
+input  [31:0]         txOutVbCnt;
+input  [31:0]         txOutValidCnt;
+input  [15:0]         rxInSfpCnt;
+input  [15:0]         rxInEfpCnt;
+input  [31:0]         rxInVbCnt;
+input  [31:0]         rxInValidCnt;
+input  [15:0]         rxOutSfpCnt;
+input  [15:0]         rxOutEfpCnt;
+input  [31:0]         rxOutVbCnt;
+input  [31:0]         rxOutValidCnt;
+input  [7:0]          txInErrCnt;
+input  [7:0]          txOutErrCnt;
+input  [7:0]          rxInErrCnt;
+input  [7:0]          rxOutErrCnt;
 
-    //RO WO ,RW ,RI ,WI ,RWI,RIWI
+//######################################################
+// Value
+// 读树和写树分开。第一拍只寄存各组命中，比较位截到本文件地址空间的最高位 [8:6]。组内再用地址 [5:2] 选出寄存器，读树超过 16 组时再按 16 个一组打拍。
+//######################################################
 
-    input     [31:0]         date;
-    input     [15:0]         user;
-    input     [15:0]         version;
-    input     [7:0]          txFifoLevel;
-    input     [7:0]          rxFifoLevel;
-    input                    fifoAlFull;
-    input     [7:0]          txFifoPeakCnt;
-    input     [7:0]          rxFifoPeakCnt;
-    input                    txBusy;
-    input     [1:0]          rsRxState;
-    input     [10:0]         padCnt;
-    input                    pcsRxSync;
-    input     [1:0]          pcsTxState;
-    input                    pcsTxEven;
-    input                    pcsTxRd;
-    input     [2:0]          pcsRxSyncState;
-    input                    pcsRxEven;
-    input                    pcsRxRd;
-    input     [31:0]         irqRaw;
-    input     [31:0]         txOverRunCnt;
-    input     [31:0]         txUnderRunCnt;
-    input     [31:0]         rxOverflowCnt;
-    input     [31:0]         txVbErrCnt;
-    input     [15:0]         txOversizeCnt;
-    input     [15:0]         txUnderrunCnt;
-    input     [31:0]         rxCrcErrCnt;
-    input     [15:0]         txSfdCnt;
-    input     [31:0]         rxSfdCnt;
-    input     [31:0]         lossOfSyncCnt;
-    input     [31:0]         codeVCnt;
-    input     [15:0]         txInSfpCnt;
-    input     [15:0]         txInEfpCnt;
-    input     [31:0]         txInVbCnt;
-    input     [31:0]         txInValidCnt;
-    input     [7:0]          txInErrCnt;
-    input     [15:0]         txOutSfpCnt;
-    input     [15:0]         txOutEfpCnt;
-    input     [31:0]         txOutVbCnt;
-    input     [31:0]         txOutValidCnt;
-    input     [7:0]          txOutErrCnt;
-    input     [15:0]         rxInSfpCnt;
-    input     [15:0]         rxInEfpCnt;
-    input     [31:0]         rxInVbCnt;
-    input     [31:0]         rxInValidCnt;
-    input     [7:0]          rxInErrCnt;
-    input     [15:0]         rxOutSfpCnt;
-    input     [15:0]         rxOutEfpCnt;
-    input     [31:0]         rxOutVbCnt;
-    input     [31:0]         rxOutValidCnt;
-    input     [7:0]          rxOutErrCnt;
+localparam [31:0] rdAddrErrData = 32'heef55fee;
 
-    output                   softRstN;
-    output                   txEn;
-    output                   rxEn;
-    output                   loopback;
-    output    [7:0]          fifoTxFifoThrd;
-    output    [31:0]         irqMask;
-    output    [3:0]          ifgCntMax;
-    output    [10:0]         lenCntMin;
-    output    [10:0]         lenCntMax;
-    output                   rxDelCrc;
-    output    [7:0]          loopbackAlFullThrd;
-    output    [7:0]          loopbackAlEmptyThrd;
-    output    [7:0]          gbxTxFifoThrd;
-    output    [7:0]          gbxRxFifoThrd;
+reg [31:0] rdAddrF1;
+reg        rdReqF1;
+reg [31:0] wrAddrF1;
+reg        wrReqF1;
+reg [31:0] wrDataF1;
 
-//###################################################### 
-//Value
-//###################################################### 
-wire  [31:0]  rdAddrErrData;
-reg   [31:0]  rdData;
-reg           rdAck;
-reg           rdErr;
-reg            softRstN;
-reg            txEn;
-reg            rxEn;
-reg            loopback;
-reg  [7:0]     fifoTxFifoThrd;
-reg  [31:0]    irqMask;
-reg  [3:0]     ifgCntMax;
-reg  [10:0]    lenCntMin;
-reg  [10:0]    lenCntMax;
-reg            rxDelCrc;
-reg  [7:0]     loopbackAlFullThrd;
-reg  [7:0]     loopbackAlEmptyThrd;
-reg  [7:0]     gbxTxFifoThrd;
-reg  [7:0]     gbxRxFifoThrd;
-wire  [3:0]   rdDecodeLevel0_0;
-reg   [31:0]  rdDataLevel0_0;
-reg           rdLevel0_0Err;
-reg           rdHitLevel0_0;
-reg           wrHitLevel0_0;
-wire          wrLevel0_0Err;
-wire  [3:0]   rdDecodeLevel0_4;
-reg   [31:0]  rdDataLevel0_4;
-reg           rdLevel0_4Err;
-reg           rdHitLevel0_4;
-reg           wrHitLevel0_4;
-reg           wrLevel0_4Err;
-wire  [3:0]   rdDecodeLevel0_5;
-reg   [31:0]  rdDataLevel0_5;
-reg           rdLevel0_5Err;
-reg           rdHitLevel0_5;
-reg           wrHitLevel0_5;
-wire          wrLevel0_5Err;
-wire  [3:0]   rdDecodeLevel0_6;
-reg   [31:0]  rdDataLevel0_6;
-reg           rdLevel0_6Err;
-reg           rdHitLevel0_6;
-reg           wrHitLevel0_6;
-wire          wrLevel0_6Err;
-wire  [3:0]   rdDecodeLevel0_7;
-reg   [31:0]  rdDataLevel0_7;
-reg           rdLevel0_7Err;
-reg           rdHitLevel0_7;
-reg           wrHitLevel0_7;
-reg           wrLevel0_7Err;
-wire  [3:0]   wrDecodeLevel0_4;
-wire  [3:0]   wrDecodeLevel0_7;
-reg   [31:0]  rdAddrF1;
-reg   [31:0]  wrAddrF1;
-reg   [31:0]  wrDataF1;
-reg           rdReqF1;
-reg           wrReqF1;
-reg           rdReqLevel1;
+reg        rdHitL0_0;
+reg [31:0] rdDataL0_0;
+reg        rdErrL0_0;
+reg        rdHitL0_1;
+reg [31:0] rdDataL0_1;
+reg        rdErrL0_1;
+reg        rdHitL0_2;
+reg [31:0] rdDataL0_2;
+reg        rdErrL0_2;
+reg        wrHitL0_0;
+reg        wrAt_00000100;
+reg        wrAt_00000104;
+wire       wrLegalNxt;
+wire       wrAckInt;
+wire       wrErrInt;
+reg        rdMissF;
+wire       rdMissInt;
+wire       rdRspHot_0;
+wire       rdRspHot_1;
+reg [1:0] rdRspSel;
+reg [31:0] rdDataL1_0;
+reg [31:0] rdDataL1_0Nxt;
+reg        rdHitL1_0;
+reg        rdHitL1_0Nxt;
+reg        rdErrL1_0;
+reg        rdErrL1_0Nxt;
+reg [1:0] rdSelL1_0;
 
-reg  [3:0]   rdSelLevel1_0;
-wire         rdHitLevel1_0_wire;
-wire [15:0] rdSelLevel1_0_onehot;
-reg  [31:0]  rdDataLevel1_0_comb;
-reg  [31:0]  rdDataLevel1_0;
-reg         rdHitLevel1_0;
-reg         rdLevel1_0Err_comb;
-reg         rdLevel1_0Err;
-//###################################################### 
-//Logic
-//###################################################### 
+wire [31:0] irqMaskInt;
+wire [7:0] fifoTxFifoThrdInt;
+wire [1:0] xmitInt;
+wire loopbackInt;
+wire rxEnInt;
+wire softRstInt;
+wire txEnInt;
 
+//######################################################
+// Logic
+// 读命中和写命中各自打拍，比较 [8:6]，存储器也在这一拍做基地址比较。读组内的 [5:2] 选出数据后，再按最多 16 个命中收成下一级。写不走读的数据树，只在自己的组里产生写使能。
+//######################################################
 
-//Rd Part
+//======================================================
+// 读命中，截到地址空间最高位
+// 本拍采样 regBusRd 与 regBusRdAddr。每个可读组比较 [8:6] 是否等于该组号，结果打入 rdHitL0。存储器用去掉条目号和偏移后的基地址做同样的比较。
+//======================================================
 
-assign rdAddrErrData = 32'heef55fee;
-
-always@(posedge clock or negedge rstN)begin
-    if(!rstN)begin
-        rdAddrF1 <= 32'h0;
-        wrAddrF1 <= 32'h0;
-        wrDataF1 <= 32'h0;
-        rdReqF1 <= 1'd0;
-        rdHitLevel0_0 <= 1'd0;
-        rdHitLevel0_4 <= 1'd0;
-        rdHitLevel0_5 <= 1'd0;
-        rdHitLevel0_6 <= 1'd0;
-        rdHitLevel0_7 <= 1'd0;
-    end
-    else begin
-        rdAddrF1 <= rdAddr;
-        wrAddrF1 <= wrAddr;
-        wrDataF1 <= wrData;
-        rdReqF1 <= rd;
-        rdHitLevel0_0 <= rd && ((rdAddr[31:6] == 26'h0));
-        rdHitLevel0_4 <= rd && ((rdAddr[31:6] == 26'h4));
-        rdHitLevel0_5 <= rd && ((rdAddr[31:6] == 26'h5));
-        rdHitLevel0_6 <= rd && ((rdAddr[31:6] == 26'h6));
-        rdHitLevel0_7 <= rd && ((rdAddr[31:6] == 26'h7));
-    end
-end
-
-assign rdDecodeLevel0_0 = rdAddrF1[5:2];
-always@(*) begin
-    rdLevel0_0Err = 1'd0;
-    case(rdDecodeLevel0_0)
-        4'd0:rdDataLevel0_0 = date;
-        4'd1:rdDataLevel0_0 = {16'd0, user};
-        4'd2:rdDataLevel0_0 = {16'd0, version};
-        default:begin 
-            rdDataLevel0_0 = rdAddrErrData;
-            rdLevel0_0Err = rdHitLevel0_0;
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            rdAddrF1 <= 32'h0;
+            rdReqF1 <= 1'b0;
+            rdHitL0_0 <= 1'b0;
+            rdHitL0_1 <= 1'b0;
+            rdHitL0_2 <= 1'b0;
         end
-    endcase
-end
-assign rdDecodeLevel0_4 = rdAddrF1[5:2];
-always@(*) begin
-    rdLevel0_4Err = 1'd0;
-    case(rdDecodeLevel0_4)
-        4'd0:rdDataLevel0_4 = {31'd0, softRstN};
-        4'd1:rdDataLevel0_4 = {31'd0, txEn};
-        4'd2:rdDataLevel0_4 = {31'd0, rxEn};
-        4'd3:rdDataLevel0_4 = {31'd0, loopback};
-        4'd5:rdDataLevel0_4 = {24'd0, fifoTxFifoThrd};
-        4'd6:rdDataLevel0_4 = irqMask;
-        4'd7:rdDataLevel0_4 = {28'd0, ifgCntMax};
-        4'd8:rdDataLevel0_4 = {24'd0, txFifoLevel};
-        4'd9:rdDataLevel0_4 = {24'd0, rxFifoLevel};
-        4'd10:rdDataLevel0_4 = {31'd0, fifoAlFull};
-        4'd11:rdDataLevel0_4 = {24'd0, txFifoPeakCnt};
-        4'd12:rdDataLevel0_4 = {24'd0, rxFifoPeakCnt};
-        4'd13:rdDataLevel0_4 = {31'd0, txBusy};
-        4'd15:rdDataLevel0_4 = {30'd0, rsRxState};
-        default:begin 
-            rdDataLevel0_4 = rdAddrErrData;
-            rdLevel0_4Err = rdHitLevel0_4;
-        end
-    endcase
-end
-assign rdDecodeLevel0_5 = rdAddrF1[5:2];
-always@(*) begin
-    rdLevel0_5Err = 1'd0;
-    case(rdDecodeLevel0_5)
-        4'd0:rdDataLevel0_5 = {21'd0, padCnt};
-        4'd2:rdDataLevel0_5 = {31'd0, pcsRxSync};
-        4'd3:rdDataLevel0_5 = {30'd0, pcsTxState};
-        4'd4:rdDataLevel0_5 = {31'd0, pcsTxEven};
-        4'd5:rdDataLevel0_5 = {31'd0, pcsTxRd};
-        4'd6:rdDataLevel0_5 = {29'd0, pcsRxSyncState};
-        4'd7:rdDataLevel0_5 = {31'd0, pcsRxEven};
-        4'd8:rdDataLevel0_5 = {31'd0, pcsRxRd};
-        4'd9:rdDataLevel0_5 = irqRaw;
-        4'd10:rdDataLevel0_5 = txOverRunCnt;
-        4'd11:rdDataLevel0_5 = txUnderRunCnt;
-        4'd12:rdDataLevel0_5 = rxOverflowCnt;
-        4'd13:rdDataLevel0_5 = txVbErrCnt;
-        4'd14:rdDataLevel0_5 = {16'd0, txOversizeCnt};
-        4'd15:rdDataLevel0_5 = {16'd0, txUnderrunCnt};
-        default:begin 
-            rdDataLevel0_5 = rdAddrErrData;
-            rdLevel0_5Err = rdHitLevel0_5;
-        end
-    endcase
-end
-assign rdDecodeLevel0_6 = rdAddrF1[5:2];
-always@(*) begin
-    rdLevel0_6Err = 1'd0;
-    case(rdDecodeLevel0_6)
-        4'd0:rdDataLevel0_6 = rxCrcErrCnt;
-        4'd1:rdDataLevel0_6 = {16'd0, txSfdCnt};
-        4'd2:rdDataLevel0_6 = rxSfdCnt;
-        4'd3:rdDataLevel0_6 = lossOfSyncCnt;
-        4'd4:rdDataLevel0_6 = codeVCnt;
-        4'd5:rdDataLevel0_6 = {16'd0, txInSfpCnt};
-        4'd6:rdDataLevel0_6 = {16'd0, txInEfpCnt};
-        4'd7:rdDataLevel0_6 = txInVbCnt;
-        4'd8:rdDataLevel0_6 = txInValidCnt;
-        4'd9:rdDataLevel0_6 = {24'd0, txInErrCnt};
-        4'd10:rdDataLevel0_6 = {16'd0, txOutSfpCnt};
-        4'd11:rdDataLevel0_6 = {16'd0, txOutEfpCnt};
-        4'd12:rdDataLevel0_6 = txOutVbCnt;
-        4'd13:rdDataLevel0_6 = txOutValidCnt;
-        4'd14:rdDataLevel0_6 = {24'd0, txOutErrCnt};
-        4'd15:rdDataLevel0_6 = {16'd0, rxInSfpCnt};
-        default:begin 
-            rdDataLevel0_6 = rdAddrErrData;
-            rdLevel0_6Err = rdHitLevel0_6;
-        end
-    endcase
-end
-assign rdDecodeLevel0_7 = rdAddrF1[5:2];
-always@(*) begin
-    rdLevel0_7Err = 1'd0;
-    case(rdDecodeLevel0_7)
-        4'd0:rdDataLevel0_7 = {16'd0, rxInEfpCnt};
-        4'd1:rdDataLevel0_7 = rxInVbCnt;
-        4'd2:rdDataLevel0_7 = rxInValidCnt;
-        4'd3:rdDataLevel0_7 = {24'd0, rxInErrCnt};
-        4'd4:rdDataLevel0_7 = {16'd0, rxOutSfpCnt};
-        4'd5:rdDataLevel0_7 = {16'd0, rxOutEfpCnt};
-        4'd6:rdDataLevel0_7 = rxOutVbCnt;
-        4'd7:rdDataLevel0_7 = rxOutValidCnt;
-        4'd8:rdDataLevel0_7 = {24'd0, rxOutErrCnt};
-        4'd9:rdDataLevel0_7 = {21'd0, lenCntMin};
-        4'd10:rdDataLevel0_7 = {21'd0, lenCntMax};
-        4'd11:rdDataLevel0_7 = {31'd0, rxDelCrc};
-        4'd12:rdDataLevel0_7 = {24'd0, loopbackAlFullThrd};
-        4'd13:rdDataLevel0_7 = {24'd0, loopbackAlEmptyThrd};
-        4'd14:rdDataLevel0_7 = {24'd0, gbxTxFifoThrd};
-        4'd15:rdDataLevel0_7 = {24'd0, gbxRxFifoThrd};
-        default:begin 
-            rdDataLevel0_7 = rdAddrErrData;
-            rdLevel0_7Err = rdHitLevel0_7;
-        end
-    endcase
-end
-assign rdSelLevel1_0_onehot = {1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0, rdHitLevel0_7, rdHitLevel0_6, 
-                                   rdHitLevel0_5, rdHitLevel0_4, rdHitLevel0_0};
-assign rdHitLevel1_0_wire = |rdSelLevel1_0_onehot;
-always@(*) begin
-    case(rdSelLevel1_0_onehot)
-        16'h1:rdSelLevel1_0 = 4'h0;
-        16'h2:rdSelLevel1_0 = 4'h1;
-        16'h4:rdSelLevel1_0 = 4'h2;
-        16'h8:rdSelLevel1_0 = 4'h3;
-        16'h10:rdSelLevel1_0 = 4'h4;
-        default:rdSelLevel1_0 = 4'h0;
-    endcase
-end
-always@(*) begin
-    case(rdSelLevel1_0)
-        4'h0:rdDataLevel1_0_comb = rdDataLevel0_0;
-        4'h1:rdDataLevel1_0_comb = rdDataLevel0_4;
-        4'h2:rdDataLevel1_0_comb = rdDataLevel0_5;
-        4'h3:rdDataLevel1_0_comb = rdDataLevel0_6;
-        4'h4:rdDataLevel1_0_comb = rdDataLevel0_7;
-        default:rdDataLevel1_0_comb = rdAddrErrData;
-    endcase
-end
-always@(*) begin
-    case(rdSelLevel1_0)
-        4'h0:rdLevel1_0Err_comb = rdLevel0_0Err;
-        4'h1:rdLevel1_0Err_comb = rdLevel0_4Err;
-        4'h2:rdLevel1_0Err_comb = rdLevel0_5Err;
-        4'h3:rdLevel1_0Err_comb = rdLevel0_6Err;
-        4'h4:rdLevel1_0Err_comb = rdLevel0_7Err;
-        default:rdLevel1_0Err_comb = 1'd0;
-    endcase
-end
-always@(posedge clock or negedge rstN)begin
-    if(!rstN)begin
-        rdDataLevel1_0 <= 32'h0;
-        rdHitLevel1_0 <= 1'd0;
-        rdLevel1_0Err <= 1'd0;
-        rdReqLevel1 <= 1'd0;
-    end
-    else begin
-        rdDataLevel1_0 <= rdDataLevel1_0_comb;
-        rdHitLevel1_0 <= rdHitLevel1_0_wire;
-        rdLevel1_0Err <= rdLevel1_0Err_comb;
-        rdReqLevel1 <= rdReqF1;
-    end
-end
-
-always@(*) begin
-    rdData = rdHitLevel1_0 ? rdDataLevel1_0 : rdAddrErrData;
-end
-
-always@(*) begin
-    rdAck = rdHitLevel1_0 || (rdReqLevel1 && !rdHitLevel1_0);
-end
-always@(*) begin
-    rdErr = (rdHitLevel1_0 ? rdLevel1_0Err : 1'd0) || (rdReqLevel1 && !rdHitLevel1_0);
-end
-
-//Write Part
-
-always@(posedge clock or negedge rstN)begin
-    if(!rstN)begin
-        wrReqF1 <= 1'd0;
-        wrHitLevel0_0 <= 1'd0;
-        wrHitLevel0_4 <= 1'd0;
-        wrHitLevel0_5 <= 1'd0;
-        wrHitLevel0_6 <= 1'd0;
-        wrHitLevel0_7 <= 1'd0;
-    end
-    else begin
-        wrReqF1 <= wr;
-        wrHitLevel0_0 <= wr && ((wrAddr[31:6] == 26'h0));
-        wrHitLevel0_4 <= wr && ((wrAddr[31:6] == 26'h4));
-        wrHitLevel0_5 <= wr && ((wrAddr[31:6] == 26'h5));
-        wrHitLevel0_6 <= wr && ((wrAddr[31:6] == 26'h6));
-        wrHitLevel0_7 <= wr && ((wrAddr[31:6] == 26'h7));
-    end
-end
-
-assign wrAck = wrReqF1;
-assign wrLevel0_0Err = wrHitLevel0_0;
-assign wrDecodeLevel0_4 = wrAddrF1[5:2];
-always@(*) begin
-    case(wrDecodeLevel0_4)
-        4'd0:wrLevel0_4Err = 1'd0;
-        4'd1:wrLevel0_4Err = 1'd0;
-        4'd2:wrLevel0_4Err = 1'd0;
-        4'd3:wrLevel0_4Err = 1'd0;
-        4'd5:wrLevel0_4Err = 1'd0;
-        4'd6:wrLevel0_4Err = 1'd0;
-        4'd7:wrLevel0_4Err = 1'd0;
-        default:wrLevel0_4Err = wrHitLevel0_4;
-    endcase
-end
-always@(posedge clock or negedge rstN) begin
-    if(!rstN)begin
-        softRstN <= 1'h1;
-        txEn <= 1'h1;
-        rxEn <= 1'h1;
-        loopback <= 1'h0;
-        fifoTxFifoThrd <= 8'd1;
-        irqMask <= 32'h0;
-        ifgCntMax <= 4'd12;
-    end
-    else begin
-        if(wrHitLevel0_4)begin
-            case(wrDecodeLevel0_4)
-                4'd0:softRstN             <= wrDataF1[0];
-                4'd1:txEn             <= wrDataF1[0];
-                4'd2:rxEn             <= wrDataF1[0];
-                4'd3:loopback             <= wrDataF1[0];
-                4'd5:fifoTxFifoThrd             <= wrDataF1[7:0];
-                4'd6:irqMask             <= wrDataF1;
-                4'd7:ifgCntMax             <= wrDataF1[3:0];
-                default:;
-            endcase
+        else begin
+            rdAddrF1 <= regBusRdAddr;
+            rdReqF1 <= regBusRd;
+            rdHitL0_0 <= (regBusRd && (regBusRdAddr[8:6] == 3'h0));
+            rdHitL0_1 <= (regBusRd && (regBusRdAddr[8:6] == 3'h4));
+            rdHitL0_2 <= (regBusRd && (regBusRdAddr[8:6] == 3'h5));
         end
     end
-end
-assign wrLevel0_5Err = wrHitLevel0_5;
-assign wrLevel0_6Err = wrHitLevel0_6;
-assign wrDecodeLevel0_7 = wrAddrF1[5:2];
-always@(*) begin
-    case(wrDecodeLevel0_7)
-        4'd9:wrLevel0_7Err = 1'd0;
-        4'd10:wrLevel0_7Err = 1'd0;
-        4'd11:wrLevel0_7Err = 1'd0;
-        4'd12:wrLevel0_7Err = 1'd0;
-        4'd13:wrLevel0_7Err = 1'd0;
-        4'd14:wrLevel0_7Err = 1'd0;
-        4'd15:wrLevel0_7Err = 1'd0;
-        default:wrLevel0_7Err = wrHitLevel0_7;
-    endcase
-end
-always@(posedge clock or negedge rstN) begin
-    if(!rstN)begin
-        lenCntMin <= 11'd60;
-        lenCntMax <= 11'd1514;
-        rxDelCrc <= 1'h1;
-        loopbackAlFullThrd <= 8'd13;
-        loopbackAlEmptyThrd <= 8'd4;
-        gbxTxFifoThrd <= 8'd1;
-        gbxRxFifoThrd <= 8'd1;
+
+//======================================================
+// 读组 0，地址 [5:2]
+// 这一组的高位已经在 rdHitL0_0 里。这里只按 [5:2] 选出组内寄存器的数据；命中但组内没有这个地址时，错误跟这次命中一起置位。
+//======================================================
+
+    always @(*) begin
+        rdDataL0_0 = rdAddrErrData;
+        rdErrL0_0 = 1'b0;
+        case (rdAddrF1[5:2])
+            4'd0: begin
+                rdDataL0_0 = date;
+                rdErrL0_0 = 1'b0;
+            end
+            4'd1: begin
+                rdDataL0_0 = {16'd0, user};
+                rdErrL0_0 = 1'b0;
+            end
+            4'd2: begin
+                rdDataL0_0 = {16'd0, version};
+                rdErrL0_0 = 1'b0;
+            end
+            default: begin
+                rdErrL0_0 = rdHitL0_0;
+            end
+        endcase
     end
-    else begin
-        if(wrHitLevel0_7)begin
-            case(wrDecodeLevel0_7)
-                4'd9:lenCntMin             <= wrDataF1[10:0];
-                4'd10:lenCntMax             <= wrDataF1[10:0];
-                4'd11:rxDelCrc             <= wrDataF1[0];
-                4'd12:loopbackAlFullThrd             <= wrDataF1[7:0];
-                4'd13:loopbackAlEmptyThrd             <= wrDataF1[7:0];
-                4'd14:gbxTxFifoThrd             <= wrDataF1[7:0];
-                4'd15:gbxRxFifoThrd             <= wrDataF1[7:0];
-                default:;
-            endcase
+
+//======================================================
+// 读组 1，地址 [5:2]
+// 这一组的高位已经在 rdHitL0_1 里。这里只按 [5:2] 选出组内寄存器的数据；命中但组内没有这个地址时，错误跟这次命中一起置位。
+//======================================================
+
+    always @(*) begin
+        rdDataL0_1 = rdAddrErrData;
+        rdErrL0_1 = 1'b0;
+        case (rdAddrF1[5:2])
+            4'd0: begin
+                rdDataL0_1 = irqMask;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd1: begin
+                rdDataL0_1 = {18'd0, txEn, softRst, rxEn, loopback, xmit, fifoTxFifoThrd};
+                rdErrL0_1 = 1'b0;
+            end
+            4'd4: begin
+                rdDataL0_1 = codeVCnt;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd5: begin
+                rdDataL0_1 = irqRaw;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd6: begin
+                rdDataL0_1 = lossOfSyncCnt;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd7: begin
+                rdDataL0_1 = rxCrcErrCnt;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd8: begin
+                rdDataL0_1 = rxOverflowCnt;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd9: begin
+                rdDataL0_1 = rxSfdCnt;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd10: begin
+                rdDataL0_1 = txOverRunCnt;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd11: begin
+                rdDataL0_1 = txUnderRunCnt;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd12: begin
+                rdDataL0_1 = txVbErrCnt;
+                rdErrL0_1 = 1'b0;
+            end
+            4'd13: begin
+                rdDataL0_1 = {txSfdCnt, txOversizeCnt};
+                rdErrL0_1 = 1'b0;
+            end
+            4'd14: begin
+                rdDataL0_1 = {5'd0, padCnt, txUnderrunCnt};
+                rdErrL0_1 = 1'b0;
+            end
+            4'd15: begin
+                rdDataL0_1 = {txFifoPeakCnt, txFifoLevel, rxFifoPeakCnt, rxFifoLevel};
+                rdErrL0_1 = 1'b0;
+            end
+            default: begin
+                rdErrL0_1 = rdHitL0_1;
+            end
+        endcase
+    end
+
+//======================================================
+// 读组 2，地址 [5:2]
+// 这一组的高位已经在 rdHitL0_2 里。这里只按 [5:2] 选出组内寄存器的数据；命中但组内没有这个地址时，错误跟这次命中一起置位。
+//======================================================
+
+    always @(*) begin
+        rdDataL0_2 = rdAddrErrData;
+        rdErrL0_2 = 1'b0;
+        case (rdAddrF1[5:2])
+            4'd0: begin
+                rdDataL0_2 = {7'd0, txBusy, pcsTxRd, pcsTxEven, pcsRxSync, pcsRxRd, pcsRxEven, fifoAlFull, rsRxState, 6'd0, pcsTxState, 5'd0, pcsRxSyncState};
+                rdErrL0_2 = 1'b0;
+            end
+            4'd1: begin
+                rdDataL0_2 = {txInEfpCnt, txInSfpCnt};
+                rdErrL0_2 = 1'b0;
+            end
+            4'd2: begin
+                rdDataL0_2 = txInVbCnt;
+                rdErrL0_2 = 1'b0;
+            end
+            4'd3: begin
+                rdDataL0_2 = txInValidCnt;
+                rdErrL0_2 = 1'b0;
+            end
+            4'd4: begin
+                rdDataL0_2 = {txOutEfpCnt, txOutSfpCnt};
+                rdErrL0_2 = 1'b0;
+            end
+            4'd5: begin
+                rdDataL0_2 = txOutVbCnt;
+                rdErrL0_2 = 1'b0;
+            end
+            4'd6: begin
+                rdDataL0_2 = txOutValidCnt;
+                rdErrL0_2 = 1'b0;
+            end
+            4'd7: begin
+                rdDataL0_2 = {rxInEfpCnt, rxInSfpCnt};
+                rdErrL0_2 = 1'b0;
+            end
+            4'd8: begin
+                rdDataL0_2 = rxInVbCnt;
+                rdErrL0_2 = 1'b0;
+            end
+            4'd9: begin
+                rdDataL0_2 = rxInValidCnt;
+                rdErrL0_2 = 1'b0;
+            end
+            4'd10: begin
+                rdDataL0_2 = {rxOutEfpCnt, rxOutSfpCnt};
+                rdErrL0_2 = 1'b0;
+            end
+            4'd11: begin
+                rdDataL0_2 = rxOutVbCnt;
+                rdErrL0_2 = 1'b0;
+            end
+            4'd12: begin
+                rdDataL0_2 = rxOutValidCnt;
+                rdErrL0_2 = 1'b0;
+            end
+            4'd13: begin
+                rdDataL0_2 = {rxOutErrCnt, rxInErrCnt, txOutErrCnt, txInErrCnt};
+                rdErrL0_2 = 1'b0;
+            end
+            default: begin
+                rdErrL0_2 = rdHitL0_2;
+            end
+        endcase
+    end
+
+//======================================================
+// 读第 0 组结果汇合
+// 组命中先拼成独热码，单独译成 rdSelL1_0。下一个 always 再用这个选择码取出已经准备好的 32bit 数据，然后打拍，和总线读应答对齐。
+//======================================================
+
+    always @(*) begin
+        rdSelL1_0 = 2'd0;
+        case ({rdHitL0_2, rdHitL0_1, rdHitL0_0})
+            3'h1: rdSelL1_0 = 2'd0;
+            3'h2: rdSelL1_0 = 2'd1;
+            3'h4: rdSelL1_0 = 2'd2;
+            default: rdSelL1_0 = 2'd0;
+        endcase
+    end
+
+    always @(*) begin
+        rdDataL1_0Nxt = rdAddrErrData;
+        rdHitL1_0Nxt = 1'b0;
+        rdErrL1_0Nxt = 1'b0;
+        case (rdSelL1_0)
+            2'd0: begin
+                rdDataL1_0Nxt = rdDataL0_0;
+                rdErrL1_0Nxt = rdErrL0_0;
+            end
+            2'd1: begin
+                rdDataL1_0Nxt = rdDataL0_1;
+                rdErrL1_0Nxt = rdErrL0_1;
+            end
+            2'd2: begin
+                rdDataL1_0Nxt = rdDataL0_2;
+                rdErrL1_0Nxt = rdErrL0_2;
+            end
+            default: begin
+                rdDataL1_0Nxt = rdAddrErrData;
+                rdErrL1_0Nxt = 1'b0;
+            end
+        endcase
+        rdHitL1_0Nxt = (rdHitL0_0 || rdHitL0_1 || rdHitL0_2) ? 1'b1 : 1'b0;
+    end
+
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            rdDataL1_0 <= 32'h0;
+            rdHitL1_0 <= 1'b0;
+            rdErrL1_0 <= 1'b0;
+        end
+        else begin
+            rdDataL1_0 <= rdDataL1_0Nxt;
+            rdHitL1_0 <= rdHitL1_0Nxt;
+            rdErrL1_0 <= rdErrL1_0Nxt;
         end
     end
-end
-    assign wrErr = wrLevel0_0Err || wrLevel0_4Err || wrLevel0_5Err || wrLevel0_6Err || wrLevel0_7Err || 
-    (wrReqF1 && !(wrHitLevel0_0 || wrHitLevel0_4 || wrHitLevel0_5 || wrHitLevel0_6 || wrHitLevel0_7));
+
+    assign rdMissInt = (rdReqF1 && !rdHitL0_0 && !rdHitL0_1 && !rdHitL0_2) ? 1'b1 : 1'b0;
+
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            rdMissF <= 1'b0;
+        end
+        else begin
+            rdMissF <= rdMissInt;
+        end
+    end
+
+//======================================================
+// 写命中，与读使用不同的组
+// 只为可写寄存器建组，组号可以和读树不同。比较位同样截到 [8:6]。写数据、写地址和写请求在这一拍采样，供下一拍写入。
+//======================================================
+
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            wrAddrF1 <= 32'h0;
+            wrReqF1 <= 1'b0;
+            wrDataF1 <= 32'h0;
+            wrHitL0_0 <= 1'b0;
+        end
+        else begin
+            wrAddrF1 <= regBusWrAddr;
+            wrReqF1 <= regBusWr;
+            wrDataF1 <= regBusWrData;
+            wrHitL0_0 <= (regBusWr && (regBusWrAddr[8:6] == 3'h4));
+        end
+    end
+
+//======================================================
+// 写组内选择
+// 每个 wrHitL0 单独一个 always，只处理这一组地址 [5:2] 上的写使能。wrLegalNxt 是各寄存器写使能和各写表合法命中的或，表示这次写落到了某个可写范围。
+//======================================================
+
+    always @(*) begin
+        wrAt_00000100 = 1'b0;
+        wrAt_00000104 = 1'b0;
+        case (wrAddrF1[5:2])
+            4'd0: wrAt_00000100 = wrHitL0_0;
+            4'd1: wrAt_00000104 = wrHitL0_0;
+            default: begin
+                wrAt_00000100 = 1'b0;
+                wrAt_00000104 = 1'b0;
+            end
+        endcase
+    end
+
+    assign wrLegalNxt = wrAt_00000100
+        || wrAt_00000104;
+
+    assign wrAckInt = (wrReqF1) ? 1'b1 : 1'b0;
+    assign wrErrInt = (wrReqF1 && !wrLegalNxt) ? 1'b1 : 1'b0;
+
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            regBusWrAck <= 1'b0;
+            regBusWrErr <= 1'b0;
+        end
+        else begin
+            regBusWrAck <= wrAckInt;
+            regBusWrErr <= wrErrInt;
+        end
+    end
+
+//======================================================
+// 寄存器存储与触发，与写应答同一拍更新
+// Int 是对应寄存器的下一拍，只用 assign 产生。写数据和写触发共用一个时序块，复位时分别回到默认值和 0。读触发与读应答同一拍置位。
+//======================================================
+
+    assign irqMaskInt = wrAt_00000100 ? wrDataF1 : irqMask;
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            irqMask <= 32'h0;
+        end
+        else begin
+            irqMask <= irqMaskInt;
+        end
+    end
+
+    assign fifoTxFifoThrdInt = wrAt_00000104 ? wrDataF1[7:0] : fifoTxFifoThrd;
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            fifoTxFifoThrd <= 8'd1;
+        end
+        else begin
+            fifoTxFifoThrd <= fifoTxFifoThrdInt;
+        end
+    end
+
+    assign xmitInt = wrAt_00000104 ? wrDataF1[9:8] : xmit;
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            xmit <= 2'd2;
+        end
+        else begin
+            xmit <= xmitInt;
+        end
+    end
+
+    assign loopbackInt = wrAt_00000104 ? wrDataF1[10] : loopback;
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            loopback <= 1'h0;
+        end
+        else begin
+            loopback <= loopbackInt;
+        end
+    end
+
+    assign rxEnInt = wrAt_00000104 ? wrDataF1[11] : rxEn;
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            rxEn <= 1'h1;
+        end
+        else begin
+            rxEn <= rxEnInt;
+        end
+    end
+
+    assign softRstInt = wrAt_00000104 ? wrDataF1[12] : softRst;
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            softRst <= 1'h0;
+        end
+        else begin
+            softRst <= softRstInt;
+        end
+    end
+
+    assign txEnInt = wrAt_00000104 ? wrDataF1[13] : txEn;
+    always @(posedge clkMgmt or negedge rstN) begin
+        if (!rstN) begin
+            txEn <= 1'h1;
+        end
+        else begin
+            txEn <= txEnInt;
+        end
+    end
+
+//======================================================
+// 存储器端口，命中后去掉地址前缀得到表内地址
+// Rd 只在该条目的最低偏移置位。RdAck 为 1 时返回第一个字段，其后各拍按偏移选择后面的字段。写使能在该条目的最后一个合法偏移置位，并与写应答同一拍输出。
+//======================================================
+
+//======================================================
+// 读应答，Ack 表示完成，Err 表示完成但有错误
+// 寄存器汇合结果、各表命中和未命中先收成独热码 rdRspHot，译成 rdRspSel。下一个 always 再用 rdRspSel 给出数据和应答。Ack 与 Err 同一拍变化，未命中时二者同时为 1。
+//======================================================
+
+    assign rdRspHot_0 = rdHitL1_0;
+    assign rdRspHot_1 = (rdMissF && !rdRspHot_0);
+
+    always @(*) begin
+        rdRspSel = 2'd0;
+        case ({rdRspHot_1, rdRspHot_0})
+            2'h1: rdRspSel = 2'd1;
+            2'h2: rdRspSel = 2'd2;
+            default: rdRspSel = 2'd0;
+        endcase
+    end
+
+    always @(*) begin
+        regBusRdData = rdAddrErrData;
+        regBusRdAck = 1'b0;
+        regBusRdErr = 1'b0;
+        case (rdRspSel)
+            2'd1: begin
+                regBusRdData = (rdErrL1_0) ? rdAddrErrData : rdDataL1_0;
+                regBusRdAck = 1'b1;
+                regBusRdErr = rdErrL1_0;
+            end
+            2'd2: begin
+                regBusRdData = rdAddrErrData;
+                regBusRdAck = 1'b1;
+                regBusRdErr = 1'b1;
+            end
+            default: begin
+                regBusRdData = rdAddrErrData;
+                regBusRdAck = 1'b0;
+                regBusRdErr = 1'b0;
+            end
+        endcase
+    end
 
 endmodule

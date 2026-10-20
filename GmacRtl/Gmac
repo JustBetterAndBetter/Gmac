@@ -52,3 +52,23 @@ txSfdCnt             16         RO                         Tx SFD count
 rxSfdCnt             32         RO                         Rx SFD count
 lossOfSyncCnt        32         RO                         PCS loss of sync count
 codeVCnt             32         RO                         Rx /V/ or invalid in packet count
+txInSfpCnt           16         RO                         Tx user SFP count
+txInEfpCnt           16         RO                         Tx user EFP count
+txInVbCnt            32         RO                         Tx user accepted byte count
+txInValidCnt         32         RO                         Tx user accepted beat count
+txInErrCnt           8          RO                         Tx user err beat count
+txOutSfpCnt          16         RO                         Tx RS SFP count
+txOutEfpCnt          16         RO                         Tx RS EFP count
+txOutVbCnt           32         RO                         Tx RS accepted byte count
+txOutValidCnt        32         RO                         Tx RS accepted beat count
+txOutErrCnt          8          RO                         Tx RS err beat count
+rxInSfpCnt           16         RO                         Rx RS SFP count
+rxInEfpCnt           16         RO                         Rx RS EFP count
+rxInVbCnt            32         RO                         Rx RS accepted byte count
+rxInValidCnt         32         RO                         Rx RS accepted beat count
+rxInErrCnt           8          RO                         Rx RS err beat count
+rxOutSfpCnt          16         RO                         Rx user SFP count
+rxOutEfpCnt          16         RO                         Rx user EFP count
+rxOutVbCnt           32         RO                         Rx user accepted byte count
+rxOutValidCnt        32         RO                         Rx user accepted beat count
+rxOutErrCnt          8          RO                         Rx user err beat count

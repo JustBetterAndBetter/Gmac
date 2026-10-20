@@ -7,6 +7,7 @@
 // Description   : Tx Idle/InPkt/AfterPkt + 8B/10B + RD。10b 口每拍一个码组，无 stall。
 //                 入向每拍 1 字节，rs2PcsPktBusData[0] 先发。
 //                 出向 pcs2GbxCodeBusCodeGroup[0] 先出。
+//                 未同步时仍收下字节，让前级把 usrTx 报文弹出；线上只发 /I/。
 //                 rstN 已是 clkTx 域同步释放复位，不再另接 softRstN。
 //                 状态口 pcsTxState 仍是寄存器表里的 2 bit，内部用独热码。
 //
@@ -17,13 +18,14 @@
 // 2026/09/16   fxdqe           1.0                     Original
 // 2026/10/04   fxdqe           1.1                     去掉 xmit，发包只看 txEn
 // 2026/10/05   fxdqe           1.2                     独热两段式，按功能拆 always
+// 2026/10/20   fxdqe           1.3                     未同步时丢弃报文，线上发 /I/
 // -FHDR----------------------------------------------------------------------------
 
 `include "GmacIf.vh"
 
 module PcsTxEncode(/*autoarg*/
         //Inputs
-        clkTx, rstN, txEn, rs2PcsPktBusData,
+        clkTx, rstN, txEn, syncTx, rs2PcsPktBusData,
         rs2PcsPktBusValid, rs2PcsPktBusSfp, rs2PcsPktBusEfp,
         rs2PcsPktBusErr, rs2PcsPktBusPreemptable,
         //Outputs
@@ -38,6 +40,7 @@ module PcsTxEncode(/*autoarg*/
 input                           clkTx;
 input                           rstN;
 input                           txEn;
+input                           syncTx;
 
 input  [`GMAC_BYTE_W-1:0]       rs2PcsPktBusData;
 input                           rs2PcsPktBusValid;
@@ -73,6 +76,7 @@ localparam [7:0] D16_2 = 8'h50;
 wire                            inIdle;
 wire                            inPkt;
 wire                            inAfter;
+wire                            dropTx;
 wire                            wantStart;
 wire                            takeS;
 wire                            pktEnd;
@@ -113,14 +117,16 @@ reg  [`GMAC_CODE_W-1:0]         codeF1;
 
 //======================================================
 // 拍条件：起包、收包、反压
-// txEn 只门控新包。已经发出 /S/ 的当前包必须排完。
+// txEn 只门控新包。已经发出 /S/ 的当前包，同步还在时必须排完。
+// 未同步时不再起包，当前包也立刻停。Stall 拉低，字节照收但不编码。
 // Stall 不看 Valid。Idle 奇位置不能发 /S/，前级在 Stall 时把 Valid 拉低。
 //======================================================
 
     assign inIdle    = (state == ST_IDLE);
     assign inPkt     = (state == ST_INPKT);
     assign inAfter   = (state == ST_AFTER);
-    assign wantStart = txEn & inIdle & rs2PcsPktBusValid & rs2PcsPktBusSfp;
+    assign dropTx    = ~syncTx;
+    assign wantStart = txEn & syncTx & inIdle & rs2PcsPktBusValid & rs2PcsPktBusSfp;
     assign takeS     = wantStart & txEven;
     assign pktEnd    = inPkt & rs2PcsPktBusValid & rs2PcsPktBusEfp;
     assign inPktGap  = inPkt & ~rs2PcsPktBusValid;
@@ -128,7 +134,7 @@ reg  [`GMAC_CODE_W-1:0]         codeF1;
     // /T/ 的下一拍若仍是偶位置，再留一个 /R/。计数被扰过 1 时也离开
     assign leaveAfter = inAfter & (afterCnt >= 2'd1) &
                         ((afterCnt >= 2'd2) | ~txEven);
-    assign rs2PcsPktBusStall = inAfter | (inIdle & ~txEven);
+    assign rs2PcsPktBusStall = dropTx ? 1'b0 : (inAfter | (inIdle & ~txEven));
 
 // synthesis translate_off
     always@(posedge clkTx) begin
@@ -160,7 +166,9 @@ reg  [`GMAC_CODE_W-1:0]         codeF1;
 
     always @(*) begin
         stateNxt = state;
-        case (state)
+        if (dropTx)
+            stateNxt = ST_IDLE;
+        else case (state)
             ST_IDLE:  if (takeS)      stateNxt = ST_INPKT;
             ST_INPKT: if (pktEnd)     stateNxt = ST_AFTER;
             ST_AFTER: if (leaveAfter) stateNxt = ST_IDLE;
@@ -196,15 +204,18 @@ reg  [`GMAC_CODE_W-1:0]         codeF1;
 
 //======================================================
 // 八位组选择。takeS 必须写在 Idle 前面，否则起包拍仍编成 /I/
+// 未同步时整拍按 /I/ 编：偶位置 K28.5，奇位置 D5.6 或 D16.2
 //======================================================
 
-    assign encIsK   = takeS    ? 1'b1 :
+    assign encIsK   = dropTx   ? txEven :
+                      takeS    ? 1'b1 :
                       inIdle   ? txEven :
                       inAfter  ? 1'b1 :
                       inPktGap ? 1'b1 :
                       errV     ? 1'b1 :
                                  1'b0;
-    assign encOctet = takeS    ? K27_7 :
+    assign encOctet = dropTx   ? (txEven ? K28_5 : (iUseI1 ? D5_6 : D16_2)) :
+                      takeS    ? K27_7 :
                       inIdle   ? (txEven ? K28_5 : (iUseI1 ? D5_6 : D16_2)) :
                       inAfter  ? ((afterCnt <= 2'd0) ? K29_7 : K23_7) :
                       inPktGap ? K30_7 :
@@ -254,7 +265,7 @@ reg  [`GMAC_CODE_W-1:0]         codeF1;
 // /I/ 第二码 @ clkTx。偶拍锁存 RD，奇拍选 D5.6 或 D16.2
 //======================================================
 
-    assign iUseI1Int = (inIdle & txEven) ? txRd : iUseI1;
+    assign iUseI1Int = ((inIdle | dropTx) & txEven) ? txRd : iUseI1;
 
     always@(posedge clkTx or negedge rstN) begin
         if (!rstN)
@@ -279,7 +290,8 @@ reg  [`GMAC_CODE_W-1:0]         codeF1;
 //======================================================
 
     assign pcs2GbxCodeBusCodeGroup = codeF1;
-    assign pcsTxState              = inAfter ? 2'd2 :
+    assign pcsTxState              = dropTx  ? 2'd0 :
+                                     inAfter ? 2'd2 :
                                      inPkt   ? 2'd1 :
                                                2'd0;
     assign pcsTxEven               = ~txEven;

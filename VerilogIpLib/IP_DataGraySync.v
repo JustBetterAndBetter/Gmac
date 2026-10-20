@@ -50,13 +50,14 @@ wire [DATAWIDTH-1:0] dataDeGrayB;
         dataGrayAF2 <= dataGrayAF1;
     end
 
-    generate  
+    // 格雷码从最高位逐级异或还原。只异或相邻两位会把计数值读错。
+    assign dataDeGrayB[DATAWIDTH-1] = dataGrayAF2[DATAWIDTH-1];
+    generate
         genvar i;
-        for(i=0;i<DATAWIDTH-1;i=i+1)begin:GRAYLIFT
-            assign dataDeGrayB[i] = dataGrayAF2[i] ^ dataGrayAF2[i+1];
+        for (i = 0; i < DATAWIDTH-1; i = i + 1) begin:GRAYLIFT
+            assign dataDeGrayB[DATAWIDTH-2-i] = dataDeGrayB[DATAWIDTH-1-i] ^ dataGrayAF2[DATAWIDTH-2-i];
         end
     endgenerate
-    assign dataDeGrayB[DATAWIDTH-1] = dataGrayAF2[DATAWIDTH-1];
 
     assign dataB = dataDeGrayB;
 

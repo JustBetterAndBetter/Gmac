@@ -242,6 +242,24 @@ reg                        underRunGapF1;
     assign fifoPush     = fltValid & ~fifoFull;
     assign fifoPushData = {fltPre, fltErr, fltEfp, fltSfp, fltVb, fltData};
 
+    // 整帧已经在 FIFO 里时，即使没过水线也要发出。否则阈值大于帧的拍数，短帧会一直停住。
+    reg [4:0] efpPushCnt;
+    always@(posedge clkUsr or negedge rstNUsr) begin
+        if (!rstNUsr) begin
+            efpPushCnt <= 5'd0;
+        end
+        else if (fifoPush && fltEfp) begin
+            efpPushCnt <= efpPushCnt + 5'd1;
+        end
+    end
+
+    wire [4:0] efpPushCntTx;
+    IP_DataGraySync #(.DATAWIDTH(5)) uEfpPushCnt (
+        .dataA  (efpPushCnt),
+        .clockB (clkTx),
+        .dataB  (efpPushCntTx)
+    );
+
     // 反压期间仍来 Valid：本拍不该再写。Full 已挡住 Push，FIFO overRun 不会置位
     assign txOverRunCntInt = (pushViolate &&
                               (txOverRunCnt != {`GMAC_CNT_W32{1'd1}})) ?
@@ -281,8 +299,18 @@ reg                        underRunGapF1;
     assign lastByteIdx = headVb[3:0] - 4'd1;
     assign isLastByte  = (byteCnt == lastByteIdx);
 
-    // 未开启发：fifoValid 水线开门；已在包内：只要 head 非空即可继续
-    assign canBeat  = ~fifoEmpty & (inPkt | fifoValid);
+    // 未开启发：水线到了，或者 FIFO 里已经有完整帧（EFP 已写入），才开门。
+    // 已在包内：只要 head 非空即可继续。
+    reg [4:0] efpPopCnt;
+    always@(posedge clkTx or negedge rstNTx) begin
+        if (!rstNTx) begin
+            efpPopCnt <= 5'd0;
+        end
+        else if (fifoPop && headEfp) begin
+            efpPopCnt <= efpPopCnt + 5'd1;
+        end
+    end
+    assign canBeat  = ~fifoEmpty & (inPkt | fifoValid | (efpPushCntTx != efpPopCnt));
     assign rsFire   = canBeat & ~cdc2RsPktBusStall;
     assign fifoPop  = rsFire & isLastByte;
 

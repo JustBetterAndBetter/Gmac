@@ -25,7 +25,7 @@
 
 module PcsSdsGbxTx(/*autoarg*/
         //Inputs
-        clkTx, clkSdsTx, rstN, gbxTxFifoThrd, pcs2GbxCodeBusCodeGroup, 
+        clkTx, clkSdsTx, rstN, gbxTxFifoThrd, pcsTxEven, pcs2GbxCodeBusCodeGroup, 
         //Outputs
         gbx2SdsTxBusData
 );
@@ -49,6 +49,7 @@ input                   clkSdsTx;
 input                   rstN;
 
 input  [7:0]            gbxTxFifoThrd;
+input                   pcsTxEven;
 input  [`GMAC_CODE_W-1:0] pcs2GbxCodeBusCodeGroup;
 output reg [`GMAC_SDS_W-1:0] gbx2SdsTxBusData;
 
@@ -60,9 +61,9 @@ output reg [`GMAC_SDS_W-1:0] gbx2SdsTxBusData;
 wire                    rstNTx;
 wire                    rstNSdsTx;
 
-// Push @ clkTx：偶拍锁低 10b，奇拍拼 20b
-reg                     even;
-wire                    evenInt;
+// Push @ clkTx：pcsTxEven=1 的码组放低 10b（先出），下一拍拼高 10b
+reg                     gotEven;
+wire                    gotEvenInt;
 reg  [`GMAC_CODE_W-1:0] codeLo;
 wire [`GMAC_CODE_W-1:0] codeLoInt;
 reg                     pushCmd;
@@ -151,27 +152,22 @@ wire [`GMAC_SDS_W-1:0]  gbx2SdsTxBusDataInt;
 // Push @ clkTx：偶拍锁低 10b，奇拍拼成 20b 写 FIFO
 //======================================================
 
-    assign evenInt = ~even;
-
-    always@(posedge clkTx or negedge rstNTx) begin
-        if (!rstNTx)
-            even <= 1'b1;
-        else
-            even <= evenInt;
-    end
-
-    assign codeLoInt   = even ? pcs2GbxCodeBusCodeGroup : codeLo;
-    assign pushCmdInt  = even ? 1'b0 : ~fifoFull;
-    assign pushDataInt = even ? pushData : {pcs2GbxCodeBusCodeGroup, codeLo};
+    // 偶码组（空闲时是 /K28.5/）先出。本地 even 与编码器差一拍，所以跟 pcsTxEven。
+    assign gotEvenInt  = pcsTxEven ? 1'b1 : gotEven;
+    assign codeLoInt   = pcsTxEven ? pcs2GbxCodeBusCodeGroup : codeLo;
+    assign pushCmdInt  = (~pcsTxEven & gotEven) ? ~fifoFull : 1'b0;
+    assign pushDataInt = pcsTxEven ? pushData : {pcs2GbxCodeBusCodeGroup, codeLo};
     assign fifoPush    = pushCmd;
 
     always@(posedge clkTx or negedge rstNTx) begin
         if (!rstNTx) begin
+            gotEven  <= 1'b0;
             codeLo   <= {`GMAC_CODE_W{1'b0}};
             pushCmd  <= 1'b0;
             pushData <= {`GMAC_SDS_W{1'b0}};
         end
         else begin
+            gotEven  <= gotEvenInt;
             codeLo   <= codeLoInt;
             pushCmd  <= pushCmdInt;
             pushData <= pushDataInt;
